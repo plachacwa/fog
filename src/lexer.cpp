@@ -8,8 +8,8 @@
 #include <iostream>
 using namespace std;
 
-const unordered_set<string_view>& getKeywords() {
-    static const unordered_set<string_view> keywords {
+const unordered_set<string_view>& keywords() {
+    static const unordered_set<string_view> table {
 		"break",	"class",	"continue",	"const",
 		"else",		"enum",		"extern",	"extend",
 		"false",	"final",	"for",		"friend",
@@ -19,13 +19,11 @@ const unordered_set<string_view>& getKeywords() {
 		"this",		"true",		"type",		"var",
 		"where",	"while",	"yield"
     };
-    return keywords;
+    return table;
 };
 
-const string_view getOpSymbols() {
-    static const string_view opSymbols = "!#$%&*+,-/<=>?@^`|~\\";
-    return opSymbols;
-};
+static constexpr string_view opSymbols = "!#$%&*+,-/<=>?@^`|~\\";
+
 
 Lexer::Lexer(string_view code) : source(code), backCar(this), frontCar(this), end(source.size()) {};
 
@@ -40,52 +38,31 @@ vector<Token> Lexer::tokenize() {
 };
 
 Token Lexer::scanToken() {
-	//cout << "Scan Token!\n";
-	backCar.setTo(frontCar);
-	const char c = frontCar.read();
+	while (!isEnd()) {
+		backCar.setTo(frontCar);
+		const char c = frontCar.read();
 	
-	if (c == '\0') return makeToken(Token::End);
-	//cout << "(X) end\n";
-	if (c == '\n') return scanNewLn();
-	else
-		wasNewLn = false;
-	//cout << "(X) newLn\n";
-	
-	if (isspace(c)) 			return skipSpace();
-	//cout << "(X) space\n";
-	if (is(c).symStart()) 		return scanSymbol();
-	//cout << "(X) symbol\n";
-	if (isdigit(c)) 			return scanDigit();
-	//cout << "(X) digit\n";
-	if (c == '\'')  			return scanChar();
-	//cout << "(X) char\n";
-	if (c == '"')				return scanString();
-	//cout << "(X) string\n";
-	
-	if (is(c).from("-{") && frontCar.readNext() == '-')
-								return scanComment();
-	//cout << "(X) comment\n";
-	
-	if (is(c).from(getOpSymbols()))	return scanOperator();
-	//cout << "(X) operator\n";
-	if (is(c).from("(){}[];:"))	return scanPunct();
-	//cout << "(X) punctuation\n";
-	
-	frontCar.fwd();
-	return makeToken(Token::Unknown);
+		if (c == '\0') return makeToken(Token::End);
+		if (c == '\n') { processNewLn(); continue; }
+		if (isspace(c)) 			{ skipSpace(); continue; };
+		if (is(c).symStart()) 		return scanSymbol();
+		if (isdigit(c)) 			return scanDigit();
+		if (c == '\'')  			return scanChar();
+		if (c == '"')				return scanString();
+		
+		if (is(c).from("-{") && frontCar.readNext() == '-') {
+			skipComment(); continue;
+		};
+		
+		if (is(c).from(opSymbols))	return scanOperator();
+		if (is(c).from("(){}[];:"))	return scanPunct();
+		
+		frontCar.fwd();
+		return makeToken(Token::Unknown);
+	};
+	return makeToken(Token::End);
 };
 
-Token Lexer::skipSpace() {
-	char c;
-	do { c = frontCar.fwd_read(); } while (c != '\n' && isspace(c));
-	return scanToken();
-};
-
-Token Lexer::scanNewLn() {
-	wasNewLn = true;
-	frontCar.newLn();
-	return scanToken();
-};
 
 Token Lexer::scanSymbol() {
 	char c;
@@ -93,9 +70,9 @@ Token Lexer::scanSymbol() {
 	
 	string_view lexeme = getStringBetweenCars();
 	
-	auto it = getKeywords().find(lexeme);
+	auto it = keywords().find(lexeme);
 	
-	if (it != getKeywords().end())
+	if (it != keywords().end())
 		return makeToken(Token::Keyword, lexeme);
 	else
 		return makeToken(Token::Symbol, lexeme);
@@ -104,8 +81,8 @@ Token Lexer::scanSymbol() {
 Token Lexer::scanDigit() {
 	char c = frontCar.fwd_read();
 	bool isFloat = false;
-	while (isdigit(c) || c == '.') {
-		if (c == '.')
+	while (isdigit(c)) {
+		if (frontCar.readNext() == '.')
 			isFloat = maybeFloat(isFloat);
 		c = frontCar.fwd_read();
 	};
@@ -113,58 +90,38 @@ Token Lexer::scanDigit() {
 };
 
 bool Lexer::maybeFloat(bool isFloat) {
-	const char next = frontCar.readNext();
+	const char next = frontCar.readWithOffset(2);
 	
+	if (isEnd(2))
+		return false;
 	if (isFloat)
 		handleException("multiple decimal dots in the number");
 	
 	if (isdigit(next)) {
-		frontCar.fwd();
+		frontCar.fwd(); // to dot
+		frontCar.fwd(); // skip dot
 		return true;
 	} else
 		return false;
 };
 
+// TODO: Escape-sequences
 Token Lexer::scanChar() {
 	frontCar.fwd(); // skip '
 	frontCar.fwd(); // skip the letter
 	return makeToken(Token::Char);
 };
-
+// TODO: Escape-sequences
 Token Lexer::scanString() {
 	frontCar.fwd(); // skip "
 	char c;
-	do { c = frontCar.fwd_read(); } while (c != '"');
+	do { c = frontCar.fwd_read(); } while (!isEnd() && c != '"');
 	return makeToken(Token::String);
-};
-
-Token Lexer::scanComment() {
-	const char c = frontCar.read();
-	if (c == '{') {
-		skipBefore("-}");
-		return scanToken();
-	} else {
-		skipBefore("\n");
-		return scanToken();
-	};
-};
-
-void Lexer::skipBefore(const char* endingSeq) {
-	size_t endingPos = source.find(endingSeq, frontCar.position);
-	const size_t length = strlen(endingSeq);
-	
-	if (endingPos + length >= end) return;
-	endingPos += length;
-	
-	while (frontCar.position != endingPos) {
-		if (frontCar.read() == '\n') frontCar.newLn();
-		else frontCar.fwd();
-	};
 };
 
 Token Lexer::scanOperator() {
 	char c;
-	do { c = frontCar.fwd_read(); } while (is(c).from(getOpSymbols()));
+	do { c = frontCar.fwd_read(); } while (is(c).from(opSymbols));
 	return makeToken(Token::Operator);
 };
 
@@ -174,19 +131,60 @@ Token Lexer::scanPunct() {
 };
 
 
+
+
+void Lexer::skipSpace() {
+	char c;
+	do { c = frontCar.fwd_read(); } while (c != '\n' && isspace(c));
+};
+
+void Lexer::processNewLn() {
+	wasNewLn = true;
+	frontCar.newLn();
+};
+void Lexer::skipComment() {
+	const char c = frontCar.read();
+	if (c == '{')
+		skipBefore("-}");
+	else
+		skipBefore("\n");
+};
+void Lexer::skipBefore(const char* endingSeq) {
+	const size_t endingPos = source.find(endingSeq, frontCar.position);
+	const size_t length = strlen(endingSeq);
+	
+	if (endingPos == string::npos || endingPos + length > end) {
+		while (frontCar.position < end)
+			frontCar.fwd();
+		return;
+	};
+	
+	const size_t targetPos = endingPos + length;
+	while (frontCar.position != targetPos) {
+		if (frontCar.read() == '\n') frontCar.newLn();
+		else frontCar.fwd();
+	};
+};
+
+
+
+
 bool Lexer::isEnd(int offset) const {
 	return (frontCar.position + offset) >= end;
 };
-Token Lexer::makeToken(Token::Type tokenType) const {
+Token Lexer::makeToken(Token::Type tokenType) {
 	return makeToken(tokenType, getStringBetweenCars());
 };
-Token Lexer::makeToken(Token::Type tokenType, string_view lexeme) const {
+Token Lexer::makeToken(Token::Type tokenType, string_view lexeme) {
+	const bool newLnFlag = wasNewLn;
+	wasNewLn = false;
+	
 	return Token {
 		tokenType,
 		lexeme, {
 			backCar.line,
 			backCar.column,
-		}, wasNewLn,
+		}, newLnFlag,
 	};
 };
 string_view Lexer::getStringBetweenCars() const {

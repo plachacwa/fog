@@ -13,30 +13,28 @@ private:
 	std::string_view source;
 	Carriage backCar, frontCar;
 	size_t end;
-	bool wasNewLn = true;
+	bool  wasNewLn = true;
 	
 	Token scanToken();
-	Token skipSpace();
-	Token scanNewLn();
 	Token scanSymbol();
-	
 	Token scanDigit();
-	bool maybeFloat(bool);
-	
+	bool  maybeFloat(bool);
 	Token scanChar();
 	Token scanString();
-	
-	Token scanComment();
-	void  skipBefore(const char*);
-	
 	Token scanOperator();
 	Token scanPunct();
+	
+	void skipSpace();
+	void processNewLn();
+	void skipComment();
+	void skipBefore(const char*);
+	
 	
 	friend char Carriage::readWithOffset(int) const;
 	
 	bool isEnd(int offset = 0) const;
-	Token makeToken(Token::Type) const;
-	Token makeToken(Token::Type, std::string_view) const;
+	Token makeToken(Token::Type);
+	Token makeToken(Token::Type, std::string_view);
 	std::string_view getStringBetweenCars() const;
 	void handleException(std::string);
 };
