@@ -1,36 +1,42 @@
 #include <string_view>
 #include <vector>
+#include <string>
 #include "token.h"
+#include "carriage.h"
 
-class Lexer;
-
-// carriage.cpp
-struct Carriage {
-	size_t position = 0;
-	Position lc;
-	size_t &line = lc.line;
-	size_t &column = lc.column;
-	Lexer* parent = nullptr;
-	
-	Carriage(Lexer*);
-	
-	void fwd();
-	void newLn();
-	void setTo(Carriage&);
-	char getChar();
-	char getNextChar();
-	char getCharWithOffset(int) const;
-};
-
-// lexer.cpp
 class Lexer {
 public:
 	Lexer(std::string_view);
-	std::vector<Token> tokenize;
+	std::vector<Token> tokenize();
 	
 private:
 	std::string_view source;
 	Carriage backCar, frontCar;
+	size_t end;
+	bool wasNewLn = true;
 	
-	friend char Carriage::getCharWithOffset(int offset) const;
+	Token scanToken();
+	Token skipSpace();
+	Token scanNewLn();
+	Token scanSymbol();
+	
+	Token scanDigit();
+	bool maybeFloat(bool);
+	
+	Token scanChar();
+	Token scanString();
+	
+	Token scanComment();
+	void  skipBefore(const char*);
+	
+	Token scanOperator();
+	Token scanPunct();
+	
+	friend char Carriage::readWithOffset(int) const;
+	
+	bool isEnd(int offset = 0) const;
+	Token makeToken(Token::Type) const;
+	Token makeToken(Token::Type, std::string_view) const;
+	std::string_view getStringBetweenCars() const;
+	void handleException(std::string);
 };

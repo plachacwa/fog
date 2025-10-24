@@ -1,38 +1,22 @@
+#include "carriage.h"
 #include "lexer.h"
+#include <cassert>
+#include <iostream>
+using namespace std;
 
-Carriage::Carriage(Lexer* p) : parent(p) {};
-
-void Carriage::fwd() {
-	position++;
-	column++;
-};
-
-void Carriage::newLn() {
-	position++;
-	line++;
-	column = 1;
-};
-
-void Carriage::setTo(Carriage& other) {
-	position = other.position;
-	line = other.line;
-	column = other.column;
-};
-
-char Carriage::getChar() {
-	return getCharWithOffset(0);
-};
-
-char Carriage::getNextChar() {
-	return getCharWithOffset(1);
-};
-
-char Carriage::getCharWithOffset(int offset = 0) const {
+char Carriage::readWithOffset(int offset = 0) const {
 	const size_t pos = this->position + offset;
-	const size_t end = parent->source.size();
+	const size_t end = parent->end;
 	
 	if (pos < end)
 		return parent->source[ pos ];
-	else
+	else {
+		//cerr << "READ BEYOND EOF!\n";
+		//cerr << "  position = " << position << "\n";
+		//cerr << "  offset   = " << offset << "\n";
+		//cerr << "  pos      = " << pos << "\n";
+		//err << "  end      = " << end << "\n";
+		//assert(false && "readWithOffset: pos >= end");
 		return '\0';
+	};
 };

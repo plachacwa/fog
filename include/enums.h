@@ -1,8 +1,9 @@
 #pragma once
 #include <cstdint>
+#include <string_view>
 
 namespace Type {
-	enum class Token : uint8_t {
+	enum class TokenT : uint8_t {
 		Symbol,
 		Integer,
 		Float,
@@ -14,4 +15,6 @@ namespace Type {
 		End,
 		Unknown,
 	};
+	
+	std::string_view get(TokenT val);
 };

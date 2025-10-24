@@ -8,13 +8,20 @@ struct Position {
 };
 
 struct Token {
-	using Type = Type::Token;
-	using enum ::Type::Token;
+	using Type = Type::TokenT;
+	using enum ::Type::TokenT;
 	
 	Type type;
 	std::string_view lexeme;
 	Position pos;
+	bool isFirstInLine = false;
 	
 	size_t &line = pos.line;
 	size_t &column = pos.column;
+	
+	bool is(Token& other) const {
+		return
+			(this->type == other.type) &&
+			(this->lexeme == other.lexeme);
+	};
 };
