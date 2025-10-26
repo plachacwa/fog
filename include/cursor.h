@@ -4,7 +4,7 @@
 
 class Lexer;
 
-struct Carriage {
+struct Cursor {
 	size_t position = 0;
 	union {
 		Position lc;
@@ -15,7 +15,7 @@ struct Carriage {
 	};
 	Lexer* parent = nullptr;
 	
-	Carriage(Lexer* p) : parent(p) {
+	Cursor(Lexer* p) : parent(p) {
 		line = 1;
 		column = 1;
 	};
@@ -43,7 +43,7 @@ struct Carriage {
 			else this->fwd();
 		};
 	};
-	inline void setTo(Carriage& other) {
+	inline void setTo(Cursor& other) {
 		position = other.position;
 		line = other.line;
 		column = other.column;

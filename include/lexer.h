@@ -2,7 +2,7 @@
 #include <vector>
 #include <string>
 #include "token.h"
-#include "carriage.h"
+#include "cursor.h"
 
 class Lexer {
 public:
@@ -18,7 +18,7 @@ public:
 	
 private:
 	std::string_view source;
-	Carriage backCar, frontCar;
+	Cursor backCur, frontCur;
 	size_t end;
 	bool wasNewLn = true;
 	
@@ -38,11 +38,11 @@ private:
 	void skipBefore(const char*);
 	
 	
-	friend char Carriage::readWithOffset(int) const;
+	friend char Cursor::readWithOffset(int) const;
 	
 	bool isEnd(int offset = 0) const;
 	Token makeToken(Token::Type);
 	Token makeToken(Token::Type, std::string_view);
-	std::string_view getStringBetweenCars() const;
+	std::string_view getStringBetweenCurs() const;
 	void handleException(const std::string&);
 };

@@ -13,19 +13,21 @@ const unordered_set<string_view>& keywords() {
 		"break",	"class",	"continue",	"const",
 		"else",		"enum",		"extern",	"extend",
 		"false",	"final",	"for",		"friend",
-		"if",		"import",	"interface","let",
-		"match",	"module",	"move",		"private",
-		"protected","public",	"return",	"spawn",
-		"this",		"true",		"type",		"var",
-		"where",	"while",	"yield"
+		"get",		"if",		"import",	"interface",
+		"let",		"match",	"module",	"move",
+		"null",		"private",	"protected","public",
+		"return",	"spawn",	"set",		"this",	
+		"true",		"type",		"var",		"where",
+		"while",	"yield"
     };
     return table;
 };
 
-static constexpr string_view opSymbols = "!#$%&*+,-./<=>?@^`|~\\";
+static constexpr
+string_view opSymbols = "!#$%&*+,-./<=>?@^`|~\\";
 
 
-Lexer::Lexer(string_view code) : source(code), backCar(this), frontCar(this), end(source.size()) {};
+Lexer::Lexer(string_view code) : source(code), backCur(this), frontCur(this), end(source.size()) {};
 
 vector<Token> Lexer::tokenize() {
 	vector<Token> tokens;
@@ -39,8 +41,8 @@ vector<Token> Lexer::tokenize() {
 
 Token Lexer::scanToken() {
 	while (!isEnd()) {
-		backCar.setTo(frontCar);
-		const char c = frontCar.read();
+		backCur.setTo(frontCur);
+		const char c = frontCur.read();
 	
 		if (c == '\0') return makeToken(Token::End);
 		if (c == '\n') { processNewLn(); continue; }
@@ -50,14 +52,14 @@ Token Lexer::scanToken() {
 		if (c == '\'')  			return scanChar();
 		if (c == '"')				return scanString();
 		
-		if (is(c).from("-{") && frontCar.readNext() == '-') {
+		if (is(c).from("-{") && frontCur.readNext() == '-') {
 			skipComment(); continue;
 		};
 		
 		if (is(c).from(opSymbols))	return scanOperator();
 		if (is(c).from("(){}[];:"))	return scanPunct();
 		
-		frontCar.fwd();
+		frontCur.fwd();
 		return makeToken(Token::Unknown);
 	};
 	return makeToken(Token::End);
@@ -66,9 +68,9 @@ Token Lexer::scanToken() {
 
 Token Lexer::scanSymbol() {
 	char c;
-	do { c = frontCar.fwd_read(); } while (is(c).symCont());
+	do { c = frontCur.fwd_read(); } while (is(c).symCont());
 	
-	string_view lexeme = getStringBetweenCars();
+	string_view lexeme = getStringBetweenCurs();
 	
 	auto it = keywords().find(lexeme);
 	
@@ -79,21 +81,21 @@ Token Lexer::scanSymbol() {
 };
 
 Token Lexer::scanDigit() {
-	char c = frontCar.read();
+	char c = frontCur.read();
 	bool isFloat = false;
 	
 	while (isdigit(c)) {
-		if (frontCar.readNext() == '.')
+		if (frontCur.readNext() == '.')
 			isFloat = maybeFloat(isFloat);
-		c = frontCar.fwd_read();
+		c = frontCur.fwd_read();
 	};
 	return makeToken(isFloat ? Token::Float : Token::Integer);
 };
-// Carriage is located before the dot.
-// Function checks whether the char after the dot (carriage + 2 chars) is a digit,
+// Cursor is located before the dot.
+// Function checks whether the char after the dot (cursor + 2 chars) is a digit,
 // and whether the dot is the first in the number.
 bool Lexer::maybeFloat(bool isFloat) {
-	const char next = frontCar.readWithOffset(2);
+	const char next = frontCur.readWithOffset(2);
 	
 	if (isEnd(2))
 		return false;
@@ -101,8 +103,8 @@ bool Lexer::maybeFloat(bool isFloat) {
 		handleException("multiple decimal dots in the number");
 	
 	if (isdigit(next)) {
-		frontCar.fwd(); // to dot
-		frontCar.fwd(); // skip dot
+		frontCur.fwd(); // to dot
+		frontCur.fwd(); // skip dot
 		return true;
 	} else
 		return false;
@@ -110,39 +112,39 @@ bool Lexer::maybeFloat(bool isFloat) {
 
 
 Token Lexer::scanChar() {
-	frontCar.fwd(); // skip '
-	if (frontCar.read() == '\\')
+	frontCur.fwd(); // skip '
+	if (frontCur.read() == '\\')
 		processEscSeq();
 	else
-		frontCar.fwd();
+		frontCur.fwd();
 	
-	if (frontCar.read() != '\'')
+	if (frontCur.read() != '\'')
 		handleException("unclosed char literal");
-	frontCar.fwd(); // skip closing '
+	frontCur.fwd(); // skip closing '
 	return makeToken(Token::Char);
 };
 
 Token Lexer::scanString() {
-	frontCar.fwd(); // skip opening "
-	char c = frontCar.read();
+	frontCur.fwd(); // skip opening "
+	char c = frontCur.read();
 	
 	do {
 		if (c == '\0')
 			handleException("unclosed string literal");
 		if (c == '\\')
 			processEscSeq();
-		c = frontCar.fwd_read();
+		c = frontCur.fwd_read();
 	} while (c != '"');
 	
-	frontCar.fwd(); // skip closing "
+	frontCur.fwd(); // skip closing "
 	return makeToken(Token::String);
 };
 
-// The function considers that carriage is on the \
+// The function considers that cursor is on the \
 // and does not check if this is really the case.
 void Lexer::processEscSeq() {
-	frontCar.fwd();
-	const char c = frontCar.read();
+	frontCur.fwd();
+	const char c = frontCur.read();
 	int length = 0;
 	if (is(c).from("\\'\"nrtbf0e")) length = 1;
 	else if (c == 'x')				length = 3;
@@ -151,19 +153,19 @@ void Lexer::processEscSeq() {
 	else
 		handleException("invalid escape sequence");
 	
-	for (; length > 0; length--) frontCar.fwd();
+	for (; length > 0; length--) frontCur.fwd();
 	
 	return;
 };
 
 Token Lexer::scanOperator() {
 	char c;
-	do { c = frontCar.fwd_read(); } while (is(c).from(opSymbols));
+	do { c = frontCur.fwd_read(); } while (is(c).from(opSymbols));
 	return makeToken(Token::Operator);
 };
 
 Token Lexer::scanPunct() {
-	frontCar.fwd();
+	frontCur.fwd();
 	return makeToken(Token::Punct);
 };
 
@@ -171,11 +173,11 @@ Token Lexer::scanPunct() {
 // \n doesn't count as whitespace
 void Lexer::skipSpace() {
 	char c;
-	do { c = frontCar.fwd_read(); } while (c != '\n' && isspace(c));
+	do { c = frontCur.fwd_read(); } while (c != '\n' && isspace(c));
 };
 void Lexer::processNewLn() {
 	wasNewLn = true;
-	frontCar.newLn();
+	frontCur.newLn();
 };
 /* Comments have that syntax:
  *     -- one-line comment
@@ -183,7 +185,7 @@ void Lexer::processNewLn() {
  *		 		   comment -}
  */
 void Lexer::skipComment() {
-	const char c = frontCar.read();
+	const char c = frontCur.read();
 	if (c == '{')
 		skipBefore("-}");
 	else
@@ -191,56 +193,56 @@ void Lexer::skipComment() {
 };
 
 void Lexer::skipBefore(const char* endingSeq) {
-	const size_t endingPos = source.find(endingSeq, frontCar.position);
+	const size_t endingPos = source.find(endingSeq, frontCur.position);
 	const size_t length = strlen(endingSeq);
 	
 	// If ending sequence is not found, consume rest of input
 	if (endingPos == string::npos || endingPos + length > end) {
-		frontCar.moveWhile(frontCar.position < end);
+		frontCur.moveWhile(frontCur.position < end);
 		return;
 	};
 	
 	const size_t targetPos = endingPos + length;
-	frontCar.moveWhile(frontCar.position != targetPos);
+	frontCur.moveWhile(frontCur.position != targetPos);
 };
 
 
 
 
 bool Lexer::isEnd(int offset) const {
-	return (frontCar.position + offset) >= end;
+	return (frontCur.position + offset) >= end;
 };
 Token Lexer::makeToken(Token::Type tokenType) {
-	return makeToken(tokenType, getStringBetweenCars());
+	return makeToken(tokenType, getStringBetweenCurs());
 };
 Token Lexer::makeToken(Token::Type tokenType, string_view lexeme) {
 	const bool newLnFlag = wasNewLn;
 	wasNewLn = false;
 	
-	// The back carriage slides to the front one
+	// The back cursor slides to the front one
 	// to display the correct position of the end token
 	if (tokenType == Token::End)
-		backCar.setTo(frontCar);
+		backCur.setTo(frontCur);
 	
 	return Token {
 		tokenType,
 		lexeme, {
-			backCar.line,
-			backCar.column,
+			backCur.line,
+			backCur.column,
 		}, newLnFlag,
 	};
 };
-string_view Lexer::getStringBetweenCars() const {
-	if (backCar.position >= source.size())
+string_view Lexer::getStringBetweenCurs() const {
+	if (backCur.position >= source.size())
 		return "";
 	else
-		return source.substr(backCar.position, frontCar.position - backCar.position);
+		return source.substr(backCur.position, frontCur.position - backCur.position);
 };
 
 void Lexer::handleException(const string& msg) {
 	const string
-		line = to_string(backCar.line),
-		column = to_string(backCar.column);
+		line = to_string(backCur.line),
+		column = to_string(backCur.column);
 	throw runtime_error(
 			"Lexer ERROR: " + msg + " at line " + line + ", column " + column
 		);
