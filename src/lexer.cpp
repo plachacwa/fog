@@ -198,12 +198,12 @@ void Lexer::skipBefore(const char* endingSeq) {
 	
 	// If ending sequence is not found, consume rest of input
 	if (endingPos == string::npos || endingPos + length > end) {
-		frontCur.moveWhile(frontCur.position < end);
+		while (frontCur.position < end) frontCur.move();
 		return;
 	};
 	
 	const size_t targetPos = endingPos + length;
-	frontCur.moveWhile(frontCur.position != targetPos);
+	while (frontCur.position != targetPos) frontCur.move();
 };
 
 

@@ -4,7 +4,7 @@
 
 class Lexer;
 
-struct Cursor {
+struct LCursor {
 	size_t position = 0;
 	union {
 		Position lc;
@@ -15,7 +15,7 @@ struct Cursor {
 	};
 	Lexer* parent = nullptr;
 	
-	Cursor(Lexer* p) : parent(p) {
+	LCursor(Lexer* p) : parent(p) {
 		line = 1;
 		column = 1;
 	};
@@ -37,13 +37,11 @@ struct Cursor {
 		newLn();
 		return read();
 	};
-	inline void moveWhile(bool condition) {
-		while (condition) {
-			if (this->read() == '\n') this->newLn();
-			else this->fwd();
-		};
+	inline void move() {
+		if (this->read() == '\n') this->newLn();
+		else this->fwd();
 	};
-	inline void setTo(Cursor& other) {
+	inline void setTo(LCursor& other) {
 		position = other.position;
 		line = other.line;
 		column = other.column;
