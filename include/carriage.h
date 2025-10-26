@@ -37,6 +37,12 @@ struct Carriage {
 		newLn();
 		return read();
 	};
+	inline void moveWhile(bool condition) {
+		while (condition) {
+			if (this->read() == '\n') this->newLn();
+			else this->fwd();
+		};
+	};
 	inline void setTo(Carriage& other) {
 		position = other.position;
 		line = other.line;

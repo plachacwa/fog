@@ -89,7 +89,9 @@ Token Lexer::scanDigit() {
 	};
 	return makeToken(isFloat ? Token::Float : Token::Integer);
 };
-
+// Carriage is located before the dot.
+// Function checks whether the char after the dot (carriage + 2 chars) is a digit,
+// and whether the dot is the first in the number.
 bool Lexer::maybeFloat(bool isFloat) {
 	const char next = frontCar.readWithOffset(2);
 	
@@ -135,6 +137,9 @@ Token Lexer::scanString() {
 	frontCar.fwd(); // skip closing "
 	return makeToken(Token::String);
 };
+
+// The function considers that carriage is on the \
+// and does not check if this is really the case.
 void Lexer::processEscSeq() {
 	frontCar.fwd();
 	const char c = frontCar.read();
@@ -163,17 +168,20 @@ Token Lexer::scanPunct() {
 };
 
 
-
-
+// \n doesn't count as whitespace
 void Lexer::skipSpace() {
 	char c;
 	do { c = frontCar.fwd_read(); } while (c != '\n' && isspace(c));
 };
-
 void Lexer::processNewLn() {
 	wasNewLn = true;
 	frontCar.newLn();
 };
+/* Comments have that syntax:
+ *     -- one-line comment
+ *	  {- multiline
+ *		 		   comment -}
+ */
 void Lexer::skipComment() {
 	const char c = frontCar.read();
 	if (c == '{')
@@ -181,21 +189,19 @@ void Lexer::skipComment() {
 	else
 		skipBefore("\n");
 };
+
 void Lexer::skipBefore(const char* endingSeq) {
 	const size_t endingPos = source.find(endingSeq, frontCar.position);
 	const size_t length = strlen(endingSeq);
 	
+	// If ending sequence is not found, consume rest of input
 	if (endingPos == string::npos || endingPos + length > end) {
-		while (frontCar.position < end)
-			frontCar.fwd();
+		frontCar.moveWhile(frontCar.position < end);
 		return;
 	};
 	
 	const size_t targetPos = endingPos + length;
-	while (frontCar.position != targetPos) {
-		if (frontCar.read() == '\n') frontCar.newLn();
-		else frontCar.fwd();
-	};
+	frontCar.moveWhile(frontCar.position != targetPos);
 };
 
 
@@ -211,6 +217,8 @@ Token Lexer::makeToken(Token::Type tokenType, string_view lexeme) {
 	const bool newLnFlag = wasNewLn;
 	wasNewLn = false;
 	
+	// The back carriage slides to the front one
+	// to display the correct position of the end token
 	if (tokenType == Token::End)
 		backCar.setTo(frontCar);
 	

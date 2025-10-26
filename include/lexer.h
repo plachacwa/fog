@@ -20,7 +20,7 @@ private:
 	std::string_view source;
 	Carriage backCar, frontCar;
 	size_t end;
-	bool  wasNewLn = true;
+	bool wasNewLn = true;
 	
 	Token scanToken();
 	Token scanSymbol();
