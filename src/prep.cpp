@@ -20,7 +20,9 @@ optional<string> readFile(const char* filename) {
 
 void printTokens(vector<Token> tokens) {
 	for (auto &elem : tokens) {
-		cout << Type::get(elem.type) <<
-			": " << elem.lexeme << '\n';
+		cout << Type::get(elem.type) << ": \t"
+		<< elem.lexeme << " \t["
+		<< elem.pos.line << ":"
+		<< elem.pos.column << "]\n";
 	};
 };

@@ -7,6 +7,13 @@
 class Lexer {
 public:
 	Lexer(std::string_view);
+	
+		Lexer(const Lexer&) = delete;
+		Lexer& operator=(const Lexer&) = delete;
+
+		Lexer(Lexer&&) = delete;
+		Lexer& operator=(Lexer&&) = delete;
+	
 	std::vector<Token> tokenize();
 	
 private:
@@ -21,6 +28,7 @@ private:
 	bool  maybeFloat(bool);
 	Token scanChar();
 	Token scanString();
+	void  processEscSeq();
 	Token scanOperator();
 	Token scanPunct();
 	
@@ -36,5 +44,5 @@ private:
 	Token makeToken(Token::Type);
 	Token makeToken(Token::Type, std::string_view);
 	std::string_view getStringBetweenCars() const;
-	void handleException(std::string);
+	void handleException(const std::string&);
 };

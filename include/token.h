@@ -16,9 +16,6 @@ struct Token {
 	Position pos;
 	bool isFirstInLine = false;
 	
-	size_t &line = pos.line;
-	size_t &column = pos.column;
-	
 	bool is(Token& other) const {
 		return
 			(this->type == other.type) &&

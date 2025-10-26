@@ -6,12 +6,19 @@ class Lexer;
 
 struct Carriage {
 	size_t position = 0;
-	Position lc;
-	size_t &line = lc.line;
-	size_t &column = lc.column;
+	union {
+		Position lc;
+		struct {
+			size_t line;
+			size_t column;
+		};
+	};
 	Lexer* parent = nullptr;
 	
-	Carriage(Lexer* p) : parent(p) {};
+	Carriage(Lexer* p) : parent(p) {
+		line = 1;
+		column = 1;
+	};
 	
 	inline void fwd() {
 		position++;

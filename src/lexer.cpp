@@ -22,7 +22,7 @@ const unordered_set<string_view>& keywords() {
     return table;
 };
 
-static constexpr string_view opSymbols = "!#$%&*+,-/<=>?@^`|~\\";
+static constexpr string_view opSymbols = "!#$%&*+,-./<=>?@^`|~\\";
 
 
 Lexer::Lexer(string_view code) : source(code), backCar(this), frontCar(this), end(source.size()) {};
@@ -79,8 +79,9 @@ Token Lexer::scanSymbol() {
 };
 
 Token Lexer::scanDigit() {
-	char c = frontCar.fwd_read();
+	char c = frontCar.read();
 	bool isFloat = false;
+	
 	while (isdigit(c)) {
 		if (frontCar.readNext() == '.')
 			isFloat = maybeFloat(isFloat);
@@ -105,18 +106,49 @@ bool Lexer::maybeFloat(bool isFloat) {
 		return false;
 };
 
-// TODO: Escape-sequences
+
 Token Lexer::scanChar() {
 	frontCar.fwd(); // skip '
-	frontCar.fwd(); // skip the letter
+	if (frontCar.read() == '\\')
+		processEscSeq();
+	else
+		frontCar.fwd();
+	
+	if (frontCar.read() != '\'')
+		handleException("unclosed char literal");
+	frontCar.fwd(); // skip closing '
 	return makeToken(Token::Char);
 };
-// TODO: Escape-sequences
+
 Token Lexer::scanString() {
-	frontCar.fwd(); // skip "
-	char c;
-	do { c = frontCar.fwd_read(); } while (!isEnd() && c != '"');
+	frontCar.fwd(); // skip opening "
+	char c = frontCar.read();
+	
+	do {
+		if (c == '\0')
+			handleException("unclosed string literal");
+		if (c == '\\')
+			processEscSeq();
+		c = frontCar.fwd_read();
+	} while (c != '"');
+	
+	frontCar.fwd(); // skip closing "
 	return makeToken(Token::String);
+};
+void Lexer::processEscSeq() {
+	frontCar.fwd();
+	const char c = frontCar.read();
+	int length = 0;
+	if (is(c).from("\\'\"nrtbf0e")) length = 1;
+	else if (c == 'x')				length = 3;
+	else if (c == 'u')				length = 5;
+	else if (c == 'U')				length = 9;
+	else
+		handleException("invalid escape sequence");
+	
+	for (; length > 0; length--) frontCar.fwd();
+	
+	return;
 };
 
 Token Lexer::scanOperator() {
@@ -179,6 +211,9 @@ Token Lexer::makeToken(Token::Type tokenType, string_view lexeme) {
 	const bool newLnFlag = wasNewLn;
 	wasNewLn = false;
 	
+	if (tokenType == Token::End)
+		backCar.setTo(frontCar);
+	
 	return Token {
 		tokenType,
 		lexeme, {
@@ -194,7 +229,7 @@ string_view Lexer::getStringBetweenCars() const {
 		return source.substr(backCar.position, frontCar.position - backCar.position);
 };
 
-void Lexer::handleException(string msg) {
+void Lexer::handleException(const string& msg) {
 	const string
 		line = to_string(backCar.line),
 		column = to_string(backCar.column);
