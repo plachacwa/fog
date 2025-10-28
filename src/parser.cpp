@@ -12,12 +12,13 @@ array<Token::Type, 5> valueTypes = {
 	Token::String,
 };
 
-Parser::Parser(vector<Token>& t) : tokens(t), current(0) {};
+Parser::Parser(vector<Token>& t) : tokens(t), pos(this) { end = tokens.size(); };
 
 uNode Parser::parse() {
 	return parseExpression();
 };
 
-uNode Parser::parseExpression() {
-	return uNode();
+inline uNode Parser::parseExpression() {
+	return ExprBuilder(pos).parse();
 };
+

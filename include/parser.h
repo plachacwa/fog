@@ -1,5 +1,7 @@
 #include "ast.h"
 #include "token.h"
+#include "exprbuilder.h"
+#include "pcursor.h"
 
 class Parser {
 public:
@@ -14,7 +16,13 @@ public:
 	uNode parse();
 private:
 	std::vector<Token> &tokens;
-	size_t current;
+	PCursor pos;
+	size_t end;
+	
+	friend Token& PCursor::readWithOffset(int) const;
+	friend bool PCursor::isEnd(int) const;
 
-	uNode parseExpression();
+	inline uNode parseExpression();
+	
+	inline std::unique_ptr<Atom> makeAtom(std::string_view);
 };

@@ -52,5 +52,5 @@ struct LCursor {
 	inline char readNext() const {
 		return readWithOffset(1);
 	};
-	char readWithOffset(int) const;
+	char readWithOffset(int = 0) const;
 };

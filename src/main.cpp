@@ -10,6 +10,7 @@
 #include <optional>
 #include <vector>
 #include "lexer.h"
+#include "parser.h"
 using namespace std;
 
 #ifdef ENABLE_TESTS

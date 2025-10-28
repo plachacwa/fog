@@ -7,7 +7,7 @@ RC_FILES := $(wildcard res/*.rc)
 O_FILES := $(CPP_FILES:src/%.cpp=obj/%.o) \
            $(RC_FILES:res/%.rc=obj/%.o)
 
-COMPILED_FLAGS := -pedantic -W -Wall -O3 -std=c++20
+COMPILED_FLAGS := -pedantic -W -Wall -Wno-missing-field-initializers -Wno-pedantic -Wno-comment -O3 -std=c++20
 LINKED_FLAGS   := -s
 
 INCLUDE   := -Iinclude
