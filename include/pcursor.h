@@ -1,14 +1,18 @@
 #pragma once
 #include <cstddef>
 #include "token.h"
+#include "globalctx.h"
+#include "scope.h"
 
 class Parser;
 
 struct PCursor {
 	size_t position;
-	Parser* parent;
+	Parser *parent;
+	Scope *scope;
+	GlobalContext *ctx;
 	
-	PCursor(Parser* p) : position(0), parent(p) {};
+	PCursor(Parser* p, GlobalContext* c) : position(0), parent(p), ctx(c) {};
 	
 	inline void fwd() {
 		position++;

@@ -1,4 +1,4 @@
-                              #pragma once
+#pragma once
 #include <cstdint>
 #include <string_view>
 
@@ -10,7 +10,10 @@ namespace Type {
 		Char,
 		String,
 		Operator,
-		Keyword,
+		KeywordAmbg,
+		KeywordFuncLike,
+		KeywordStmt,
+		KeywordValue,
 		Punct,
 		End,
 		Unknown,

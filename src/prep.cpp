@@ -4,6 +4,7 @@
 #include <iostream>
 #include <sstream>
 #include <vector>
+#include <iomanip>
 #include "token.h"
 using namespace std;
 
@@ -20,8 +21,8 @@ optional<string> readFile(const char* filename) {
 
 void printTokens(vector<Token> tokens) {
 	for (auto &elem : tokens) {
-		cout << Type::get(elem.type) << ": \t"
-		<< elem.lexeme << " \t["
+		cout << left << Type::get(elem.type) << ": \t"
+		<< setw(20) << elem.lexeme << " ["
 		<< elem.pos.line << ":"
 		<< elem.pos.column << "]\n";
 	};

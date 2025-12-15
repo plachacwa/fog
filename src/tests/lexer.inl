@@ -31,7 +31,7 @@ TEST(lexer_symbol) {
 TEST(lexer_keyword) {
     auto tokens = Lexer("interface").tokenize();
     vector samples = {
-        Token{Token::Keyword, "interface"},
+        Token{Token::KeywordStmt, "interface"},
         Token{Token::End, ""},
     };
     assert(tokens[0].is(samples[0]));
@@ -117,7 +117,7 @@ TEST(lexer_empty) {
 TEST(lexer_mixed) {
     auto tokens = Lexer("class main() { x = 42; }").tokenize();
     vector samples = {
-        Token{Token::Keyword, "class"},
+        Token{Token::KeywordStmt, "class"},
         Token{Token::Symbol, "main"},
         Token{Token::Punct, "("},
         Token{Token::Punct, ")"},

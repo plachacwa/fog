@@ -4,6 +4,8 @@
 #include <iterator>
 #include <concepts>
 #include <type_traits>
+#include <array>
+#include "token.h"
 
 template <class Container>
 concept Iterable = requires (Container &&c) {
@@ -49,5 +51,16 @@ template <class T>
 inline UWrapper<T> is(T value) {
 	return UWrapper<T>{value};
 };
+
+/* ==== Static arrays ==== */
+static constexpr
+std::array<Token::Type, 5> valueTypes = {
+	Token::Symbol,
+	Token::Integer,
+	Token::Float,
+	Token::Char,
+	Token::String,
+};
+
 
 #endif // UWRAPPER_H

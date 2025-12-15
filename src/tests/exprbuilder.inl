@@ -2,8 +2,10 @@
 
 TEST(expr_digit) {
     auto tokens = Lexer("42").tokenize();
-	auto node = dynamic_cast<Atom*>(Parser(tokens).parse().get());
-    auto sample = make_unique<Atom>("42", "int");
-    assert(node->value_ == sample->value_);
-	assert(node->type_.type == sample->type_.type);
+	GlobalContext ctx;
+	auto node = dynamic_cast<Atom*>(Parser(tokens, ctx).parse().get());
+	assert(node != nullptr);
+	auto literal = static_cast<Literal*>(node->info_);
+    assert(literal->type->name == "int");
+	assert(literal->value == "42");
 }

@@ -1,26 +1,36 @@
 #include "lexer.h"
 #include "utils.h"
 #include <vector>
-#include <unordered_set>
+#include <unordered_map>
 #include <stdexcept>
 #include <cstring>
 #include <algorithm>
 #include <iostream>
 using namespace std;
 
-const unordered_set<string_view>& keywords() {
-    static const unordered_set<string_view> table {
-		"break",	"class",	"continue",	"const",
-		"else",		"enum",		"extern",	"extend",
-		"false",	"final",	"for",		"friend",
-		"get",		"if",		"import",	"interface",
-		"let",		"match",	"module",	"move",
-		"null",		"private",	"protected","public",
-		"return",	"spawn",	"set",		"this",	
-		"true",		"type",		"var",		"where",
-		"while",	"yield"
+Token::Type keywordType(string_view kw) {
+    static const unordered_map<string_view, char> table {
+		{"break",	'f'}, {"class",		's'}, {"continue",	'f'}, {"const",		'a'},
+		{"else",	'a'}, {"enum",		's'}, {"extern",	'a'}, {"extend",	's'},
+		{"false",	'v'}, {"final",		'a'}, {"for",		's'}, {"friend",	'a'},
+		{"get",		'a'}, {"if",		's'}, {"import",	's'}, {"interface", 's'},
+		{"let",		's'}, {"match", 	's'}, {"module",	's'}, {"move",		'f'},
+		{"null",	'v'}, {"private",	'a'}, {"protected",	'a'}, {"public",	'a'},
+		{"return",	'f'}, {"spawn",		's'}, {"set",		'a'}, {"this",		'v'},	
+		{"true",	'v'}, {"type",		's'}, {"var",		's'}, {"where",		's'},
+		{"while",	's'}, {"yield",		'f'}
     };
-    return table;
+	
+	auto it = table.find(kw);
+	if (it != table.end()) {
+		switch (it->second) {
+			case 'a': return Token::KeywordAmbg;
+			case 'f': return Token::KeywordFuncLike;
+			case 's': return Token::KeywordStmt;
+			case 'v': return Token::KeywordValue;
+		};
+	};
+    return Token::Unknown;
 };
 
 static constexpr
@@ -72,10 +82,10 @@ Token Lexer::scanSymbol() {
 	
 	string_view lexeme = getStringBetweenCurs();
 	
-	auto it = keywords().find(lexeme);
+	auto keywordStatus = keywordType(lexeme);
 	
-	if (it != keywords().end())
-		return makeToken(Token::Keyword, lexeme);
+	if (keywordStatus != Token::Unknown)
+		return makeToken(keywordStatus, lexeme);
 	else
 		return makeToken(Token::Symbol, lexeme);
 };

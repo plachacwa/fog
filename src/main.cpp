@@ -11,6 +11,7 @@
 #include <vector>
 #include "lexer.h"
 #include "parser.h"
+#include "globalctx.h"
 using namespace std;
 
 #ifdef ENABLE_TESTS
@@ -22,6 +23,7 @@ void printTokens(vector<Token> tokens);
 
 int main() {
 	optional code = readFile("bin/test.fg");
+	GlobalContext ctx;
 	vector<Token> tokens = Lexer(*code).tokenize();
 	printTokens(tokens);
 	return 0;

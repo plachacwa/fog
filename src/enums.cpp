@@ -5,16 +5,19 @@ using Token = Type::TokenT;
 
 static unordered_map<Token, string_view>
 tokentitles = {
-	{Token::Symbol, 	"Symbol"},
-	{Token::Integer,	"Integer"},
-	{Token::Float,		"Float"},
-	{Token::Char,		"Char"},
-	{Token::String,		"String"},
-	{Token::Operator,	"Operator"},
-	{Token::Keyword,	"Keyword"},
-	{Token::Punct,		"Punct"},
-	{Token::End,		"End"},
-	{Token::Unknown,	"Unknown"}
+	{Token::Symbol, 		"Symbol"},
+	{Token::Integer,		"Integer"},
+	{Token::Float,			"Float"},
+	{Token::Char,			"Char"},
+	{Token::String,			"String"},
+	{Token::Operator,		"Operator"},
+	{Token::KeywordAmbg,	"KwAmbg"},
+	{Token::KeywordFuncLike,"KwFuncLike"},
+	{Token::KeywordStmt,	"KwStmt"},
+	{Token::KeywordValue,	"KwValue"},
+	{Token::Punct,			"Punct"},
+	{Token::End,			"End"},
+	{Token::Unknown,		"Unknown"}
 };
 
 std::string_view Type::get(Token val) {
