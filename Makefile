@@ -17,6 +17,9 @@ LIB_FILES := -static-libstdc++ -static-libgcc -static
 
 make-dir = $(shell mkdir -p $(@D) 2>nul || mkdir $(subst /,\,$(@D)) 2>nul)
 
+all: $(O_FILES) | bin
+	g++ $^ -o bin/debug/fog.exe $(LIBRARIES) $(LIB_FILES) $(LINKED_FLAGS)
+
 main: $(O_FILES) | bin
 	g++ $^ -o bin/main.exe $(LIBRARIES) $(LIB_FILES) $(LINKED_FLAGS)
 

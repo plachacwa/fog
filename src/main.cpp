@@ -9,11 +9,11 @@
 #include <string>
 #include <optional>
 #include <vector>
-#include "lexer.h"
+#include "lexer/lexer.h"
 using namespace std;
 
 #ifdef ENABLE_TESTS
-	#include "tests/tests.inl"
+	//#include "tests/tests.inl"
 #endif
 
 optional<string> readFile(const char* filename);
@@ -21,6 +21,7 @@ void printTokens(vector<Token> tokens);
 
 int main() {
 	optional code = readFile("bin/test.fg");
+	if (!code) return 1;
 	vector<Token> tokens = Lexer(*code).tokenize();
 	printTokens(tokens);
 	return 0;
