@@ -2,22 +2,22 @@
 
 ReadStream::ReadStream(Reader* reader) : reader(reader) {};
 
-ReadStream ReadStream::oneFrom(Checker isFromCharset) {
+ReadStream ReadStream::one(Checker isFromCharset) {
     if (isFailed) return *this;
 
     const int beginOffset = offset;
-    maybeOneFrom(isFromCharset);
+    maybeOne(isFromCharset);
     if (beginOffset == offset)
         isFailed = true;
     return *this;
 };
 
-ReadStream ReadStream::manyFrom(Checker isFromCharset) {
+ReadStream ReadStream::many(Checker isFromCharset) {
     if (isFailed) return *this;
 
     bool isEmpty = true;
     while (true) {
-        oneFrom(isFromCharset);
+        one(isFromCharset);
         if (isFailed) {
             isFailed = isEmpty;
             break;
@@ -27,7 +27,7 @@ ReadStream ReadStream::manyFrom(Checker isFromCharset) {
     return *this;
 };
 
-ReadStream ReadStream::maybeOneFrom(Checker isFromCharset) {
+ReadStream ReadStream::maybeOne(Checker isFromCharset) {
     if (isFailed) return *this;
     if (const char c = reader->readCharWithOffset(offset)) {
         if (isFromCharset(c)) offset++;
@@ -35,10 +35,16 @@ ReadStream ReadStream::maybeOneFrom(Checker isFromCharset) {
     return *this;
 };
 
-ReadStream ReadStream::maybeManyFrom(Checker isFromCharset) {
+ReadStream ReadStream::maybeMany(Checker isFromCharset) {
     if (isFailed) return *this;
-    manyFrom(isFromCharset);
+    many(isFromCharset);
     if (reader->readChar() == '\0')
         isEnd = true;
+    return *this;
+}
+
+ReadStream ReadStream::move() {
+    reader->move(offset);
+    offset = 0;
     return *this;
 }

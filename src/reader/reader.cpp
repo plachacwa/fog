@@ -44,6 +44,7 @@ bool Reader::move(int steps) {
 };
 
 char Reader::readChar() const { return readCharWithOffset(0); };
+char Reader::readNextChar() const { return readCharWithOffset(1); };
 char Reader::readCharWithOffset(int offset) const {
     if (position.index + offset >= source.length())
         return '\0';
@@ -52,6 +53,6 @@ char Reader::readCharWithOffset(int offset) const {
 };
 
 
-ReadStream Reader::asStream() {
-    return ReadStream(this);
-}
+string_view Reader::substrFrom(Position startPosition) const {
+    return string_view(source).substr(startPosition.index, position.index - startPosition.index);
+};

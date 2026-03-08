@@ -1,6 +1,8 @@
 #pragma once
 #include <string_view>
 
+#include "error.h"
+
 struct Position {
     int index;
     int line;
@@ -10,8 +12,11 @@ struct Position {
 enum class TokenType {
     Integer,
     Float,
-    String,
+    PrefixedInt,
+    Exponential,
+    Symbol,
     Char,
+    String,
     Operator,
     Unknown,
     End
@@ -21,4 +26,5 @@ struct Token {
     std::string_view lexeme;
     TokenType type;
     Position position;
+    Error *error;
 };

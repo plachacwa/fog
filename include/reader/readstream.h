@@ -1,4 +1,6 @@
+#pragma once
 #include "reader.h"
+#include <expected>
 
 struct ReadStream {
     Reader *reader;
@@ -11,8 +13,10 @@ struct ReadStream {
     public:
         explicit ReadStream(Reader*);
 
-        ReadStream oneFrom      (Checker);
-        ReadStream manyFrom     (Checker);
-        ReadStream maybeOneFrom (Checker);
-        ReadStream maybeManyFrom(Checker);
+        ReadStream one      (Checker);
+        ReadStream many     (Checker);
+        ReadStream maybeOne (Checker);
+        ReadStream maybeMany(Checker);
+
+        ReadStream move();
 };

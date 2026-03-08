@@ -17,5 +17,7 @@ struct Reader {
 
         bool move(int = 1);
         char readChar() const;
+        char readNextChar() const;
         char readCharWithOffset(int = 0) const;
+        std::string_view substrFrom(Position) const;
 };

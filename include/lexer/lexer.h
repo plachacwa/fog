@@ -17,5 +17,37 @@ class Lexer {
     private:
         void skipWhitespace() const;
 
-        Token makeToken(TokenType);
+    Token scanSymbol();
+
+    Token scanDigit();
+
+    void scanDigitPrefixed();
+
+    void scanDigitStandard(bool &isFloat);
+
+    void scanDigitExponent();
+
+    bool maybeFloat(bool isFloat, bool isExponent);
+
+    char getMaxFromPrefix(char c);
+
+    Token scanChar();
+
+    Token scanString();
+
+    void processEscSeq();
+
+    Token scanOperator();
+
+    Token scanPunct();
+
+    void skipSpace();
+
+    void processNewLn();
+
+    void skipComment();
+
+    Token makeToken(TokenType);
+
+    Token makeToken(TokenType type, std::string_view lexeme);
 };
