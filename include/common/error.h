@@ -4,7 +4,7 @@
 #include "token.h"
 
 struct Error {
-    Position position;
+    BigPosition position;
     int length;
     std::string msg;
 };

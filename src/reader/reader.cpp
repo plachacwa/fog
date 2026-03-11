@@ -2,6 +2,9 @@
 #include <ranges>
 
 #include "reader/reader.h"
+
+#include <cassert>
+#include <cmath>
 using namespace std;
 
 Reader::Reader()
@@ -46,13 +49,14 @@ bool Reader::move(int steps) {
 char Reader::readChar() const { return readCharWithOffset(0); };
 char Reader::readNextChar() const { return readCharWithOffset(1); };
 char Reader::readCharWithOffset(int offset) const {
-    if (position.index + offset >= source.length())
+    assert(source.length() < std::pow(2, sizeof(int)));
+    if (position.index + offset >= static_cast<int>(source.length()))
         return '\0';
     else
         return source[position.index + offset];
 };
 
 
-string_view Reader::substrFrom(Position startPosition) const {
+string_view Reader::substrFrom(BigPosition startPosition) const {
     return string_view(source).substr(startPosition.index, position.index - startPosition.index);
 };

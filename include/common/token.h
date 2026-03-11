@@ -1,12 +1,21 @@
 #pragma once
 #include <string_view>
+#include <optional>
 
-#include "error.h"
+struct Error;
 
-struct Position {
-    int index;
-    int line;
-    int column;
+struct CompactPosition {
+    int line   = 1;
+    int column = 1;
+};
+struct BigPosition {
+    int index  = 0;
+    int line   = 1;
+    int column = 1;
+
+    [[nodiscard]] CompactPosition compact() const {
+        return CompactPosition{line, column};
+    };
 };
 
 enum class TokenType {
@@ -18,13 +27,23 @@ enum class TokenType {
     Char,
     String,
     Operator,
+    Punct,
     Unknown,
-    End
+    End,
 };
 
 struct Token {
     std::string_view lexeme;
     TokenType type;
-    Position position;
-    Error *error;
+    CompactPosition position;
+    Error *error = nullptr;
+
+    std::string_view type_str() const;
+};
+
+struct OptToken {
+    std::optional<std::string_view> lexeme;
+    std::optional<TokenType> type;
+    std::optional<BigPosition> position;
+    Error *error = nullptr;
 };

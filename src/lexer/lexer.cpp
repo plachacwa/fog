@@ -1,11 +1,17 @@
 #include "lexer/lexer.h"
 
+#include <cassert>
+#include <cmath>
+#include <cstring>
+
 #include "lexer/charsets.h"
 #include "reader/readstream.h"
+#include "lexer/tokenfactory.h"
+
 using namespace std;
 
 Lexer::Lexer(Reader &reader)
-    : reader(reader), currentPosition() {};
+    : reader(reader), tf(this) {};
 
 vector<Token> Lexer::tokenizeAll() {
     vector<Token> tokens;
@@ -24,33 +30,28 @@ Token Lexer::nextToken() {
     currentPosition = reader.position;
     const char c    = reader.readChar();
 
-    if (c == '\0')              return makeToken(TokenType::End);
-    if (isdigit(c))             return scanDigit();
-    if (Charset::SymStartExt(c))   return scanSymbol();
-    if (c == '\'')              return scanChar();
-    if (c == '"')               return scanString();
-    if (Charset::Operator(c))   return scanOperator();
+    if (c == '\0')               return makeToken(TokenType::End);
+    if (isdigit(c))              return scanDigit();
+    if (Charset::SymStartExt(c)) return scanSymbol();
+    if (c == '\'')               return scanChar();
+    if (c == '"')                return scanString();
+    if (Charset::Operator(c))    return scanOperator();
+	if (Charset::Punct(c))		 return scanPunct();
 
     return makeToken(TokenType::Unknown);
 };
 
-void Lexer::skipWhitespace() const {
-    ReadStream(&reader)
-        .maybeMany(Charset::Whitespace)
-		.move();
+void Lexer::skipWhitespace() {
+    tf.maybeMany(Charset::Whitespace).clear();
 };
 
 
 
 Token Lexer::scanSymbol() {
-	reader.move();
-	ReadStream(&reader)
-		.many(Charset::SymContExt)
-		.move();
-
-	const string_view lexeme = reader.substrFrom(currentPosition);
-
-	return makeToken(TokenType::Symbol, lexeme);
+	return tf.one()
+		.maybeMany(Charset::SymContExt)
+		.type(TokenType::Symbol)
+		.token();
 };
 
 // ===============
@@ -58,164 +59,145 @@ Token Lexer::scanSymbol() {
 // ===============
 
 Token Lexer::scanDigit() {
-	if (reader.readChar() == '0' && getMaxFromPrefix(reader.readNextChar())) {
-		scanDigitPrefixed();
-		return makeToken(TokenType::PrefixedInt);
-	};
+	if (expected maxValid = getMaxFromPrefix(reader.readNextChar());
+		reader.readChar() == '0' && maxValid)
+		return scanDigitPrefixed(maxValid.value());
+	else if (!maxValid)
+		tf.pushError(std::move(maxValid.error()));
 
+	scanDigitStandard();
+
+	if (Charset::ExponentPrefix( reader.readChar() ))
+		return scanDigitExponent();
+	else
+		return tf.token();
+};
+
+Token Lexer::scanDigitPrefixed(const char maxValid) {
+	return tf.one()
+			.many(Charset::SymContExt)
+			.forEachReaden([&maxValid](const char c) { return toupper(c) <= maxValid; })
+			.errorIfFailed("characters from a different number system")
+			.type(TokenType::PrefixedInt)
+			.token();
+}
+
+void Lexer::scanDigitStandard() {
 	bool isFloat = false;
-	scanDigitStandard(isFloat);
-	if (reader.readChar() == 'e' || reader.readChar() == 'E') {
-		scanDigitExponent();
-		return makeToken(TokenType::Exponential);
+	while (!tf.many(Charset::Digit).isFailed) {
+		if (reader.readChar() == '.') {
+			if (expected floatOrErr = maybeFloat(isFloat); floatOrErr.has_value())
+				isFloat = *floatOrErr;
+			else {
+				tf.pushError(std::move(floatOrErr.error()));
+				break;
+			}
+		} else break;
 	};
-	return makeToken(isFloat ? TokenType::Float : TokenType::Integer);
+	tf.ignoreFail().type(isFloat ? TokenType::Float : TokenType::Integer);
 };
 
-void Lexer::scanDigitPrefixed() {
-	char maxValid = getMaxFromPrefix(reader.readNextChar());
-	if (maxValid == '\0') return;
-	reader.move();
-
-	/*while (!isEnd()) {
-		char c = frontCur.fwd_read();
-		if (!is(c).symCont() && c != '\'') break;
-		if (toupper(c) > maxValid)
-			handleException("characters from a different number system");
-	};*/
-	ReadStream(&reader)
-		.many(Charset::SymCont);
+Token Lexer::scanDigitExponent() {
+	tf.one()
+		.maybeOne(Charset::PlusMinus)
+		.many(Charset::Digit)
+		.errorIfFailed("expected digits in exponent");
+	if (Charset::SymContExt( reader.readChar() ))
+		tf.pushError(error("flags for exponential notation is prohibited"));
+	if (reader.readChar() == '.')
+		tf.pushError(error("dot in exponent"));
+	return tf.type(TokenType::Exponential).token();
 };
 
-void Lexer::scanDigitStandard(bool &isFloat) {
-	char c = reader.readChar();
-	while (isdigit(c) || c == '\'' || c == '.') {
-		if (c == '.')
-			isFloat = maybeFloat(isFloat, false);
-		c = reader.fwd_read();
+// Cursor is located at the dot.
+// Function checks whether the char after the dot (cursor + 1 char) is a digit,
+// and whether the dot is the first dot in the number.
+expected<bool, Error> Lexer::maybeFloat(const bool isFloat) const {
+	const char next = reader.readNextChar();
+	if (Charset::Digit(next)) {
+		if (isFloat) return unexpected(error("multiple decimal dots in the number"));
+		else		 return true;
 	};
-};
+	if (Charset::Whitespace(next))
+		return unexpected(error("hanging point after a digit is prohibited"));
 
-void Lexer::scanDigitExponent() {
-	char c = frontCur.fwd_read();
+	return false;
+}
 
-	if (c == '+' || c == '-')
-		c = frontCur.fwd_read();
-	if (!isdigit(c))
-		handleException("expected digits in exponent");
-
-	while (isdigit(c) || c == '\'') {
-		c = frontCur.fwd_read();
-	};
-
-	if (is(c).symCont())
-		handleException("flags for exponential notation is prohibited");
-	if (c == '.')
-		maybeFloat(true, true); // for the exponent dot exception
-};
-
-// Cursor is located before the dot.
-// Function checks whether the char after the dot (cursor + 2 chars) is a digit,
-// and whether the dot is the first in the number.
-bool Lexer::maybeFloat(bool isFloat, bool isExponent) {
-	const char next = frontCur.readWithOffset(2);
-
-	if (isEnd(2))
-		return false;
-	if (isExponent)
-		handleException("dot in exponent");
-	if (isFloat)
-		handleException("multiple decimal dots in the number");
-
-	if (isdigit(next) || next == '\'') {
-		if (isExponent)
-			handleException("dot in exponent");
-		if (isFloat)
-			handleException("multiple decimal dots in the number");
-		frontCur.fwd(2); // a jump through the dot
-		return true;
-	} else
-		return false;
-};
-
-char Lexer::getMaxFromPrefix(char c) {
+expected<char, Error> Lexer::getMaxFromPrefix(char c) const {
 	if (c == 'x' || c == 'X') return 'F';
 	if (c == 'o' || c == 'O') return '7';
 	if (c >= '0' && c <= '7') return '7';
 	if (c == 'b' || c == 'B') return '1';
-	if (c == '8' || c == '9')
-		handleException("characters from a different number system");
+	if (c == '8' || c == '9') return unexpected(
+		error("characters from a different number system")
+	);
 	return '\0';
 };
 
-
-
+// ===============
+// CHAR & STRING SCANNING
+// ===============
 
 Token Lexer::scanChar() {
-	frontCur.fwd(); // skip '
-	if (frontCur.read() == '\\')
-		processEscSeq();
-	else
-		frontCur.fwd();
+	reader.move(); // skip opening '
+	if (reader.readChar() == '\\') {
+		if (auto err = processEscSeq())
+			tf.pushError(std::move(*err));
+	} else
+		reader.move();
 
-	if (frontCur.read() != '\'')
-		handleException("unclosed char literal");
-	frontCur.fwd(); // skip closing '
-	return makeToken(Token::Char);
+	if (reader.readChar() != '\'')
+		tf.pushError(error("unclosed char literal"));
+	reader.move(); // skip closing '
+	return tf.type(TokenType::Char).token();
 };
 
 Token Lexer::scanString() {
-	frontCur.fwd(); // skip opening "
-	char c = frontCur.read();
+	reader.move(); // skip opening "
+	char c = reader.readChar();
 
 	do {
 		if (c == '\0')
-			handleException("unclosed string literal");
+			tf.pushError(error("unclosed string literal"));
 		if (c == '\\')
-			processEscSeq();
-		c = frontCur.fwd_read();
+			if (auto err = processEscSeq())
+				tf.pushError(std::move(*err));
+		reader.move();
+		c = reader.readChar();
 	} while (c != '"');
+	reader.move(); // skip closing "
 
-	frontCur.fwd(); // skip closing "
-	return makeToken(Token::String);
+	return tf.type(TokenType::String).token();
 };
 
 // The function considers that cursor is on the \
 // and does not check if this is really the case.
-void Lexer::processEscSeq() {
-	frontCur.fwd();
-	const char c = frontCur.read();
+optional<Error> Lexer::processEscSeq() {
+	reader.move();
+	const char c = reader.readChar();
 	int length = 0;
-	if (is(c).from("\\'\"nrtbf0e")) length = 1;
-	else if (c == 'x')				length = 3;
-	else if (c == 'u')				length = 5;
-	else if (c == 'U')				length = 9;
+	if (std::ranges::contains("\\'\"nrtbf0e", c))
+						length = 1;
+	else if (c == 'x')	length = 3;
+	else if (c == 'u')	length = 5;
+	else if (c == 'U')	length = 9;
 	else
-		handleException("invalid escape sequence");
+		return error("invalid escape sequence");
 
-	for (; length > 0; length--) frontCur.fwd();
+	reader.move(length);
+	return nullopt;
 };
 
 Token Lexer::scanOperator() {
-	char c;
-	do { c = frontCur.fwd_read(); } while (is(c).from(opSymbols));
-	return makeToken(Token::Operator);
+	return tf.many(Charset::Operator)
+			.type(TokenType::Operator)
+			.token();
 };
 
 Token Lexer::scanPunct() {
-	frontCur.fwd();
-	return makeToken(Token::Punct);
-};
-
-
-// \n doesn't count as whitespace
-void Lexer::skipSpace() {
-	char c;
-	do { c = frontCur.fwd_read(); } while (c != '\n' && isspace(c));
-};
-void Lexer::processNewLn() {
-	wasNewLn = true;
-	frontCur.newLn();
+	reader.move();
+	return makeToken(TokenType::Punct);
 };
 /* Comments have that syntax:
  *     -- one-line comment
@@ -223,7 +205,7 @@ void Lexer::processNewLn() {
  *		 		   comment -}
  */
 void Lexer::skipComment() {
-	const char c = frontCur.read();
+	const char c = reader.readChar();
 	if (c == '{')
 		skipBefore("-}");
 	else
@@ -231,27 +213,32 @@ void Lexer::skipComment() {
 };
 
 void Lexer::skipBefore(const char* endingSeq) {
-	const size_t endingPos = source.find(endingSeq, frontCur.position);
+	const size_t endingPos = reader.source.find(endingSeq, reader.position.index);
 	const size_t length = strlen(endingSeq);
 
 	// If ending sequence is not found, consume rest of input
-	if (endingPos == string::npos || endingPos + length > end) {
-		while (frontCur.position < end) frontCur.move();
+	if (endingPos == string::npos || endingPos + length > reader.source.length()) {
+		tf.maybeMany(Charset::AnyExceptNull);
 		return;
 	};
 
 	const size_t targetPos = endingPos + length;
-	while (frontCur.position != targetPos) frontCur.move();
+	assert(targetPos < std::pow(2, sizeof(int))); // TODO: change mas size of file
+	reader.move(static_cast<int>(targetPos) - reader.position.index);
 };
 
-Token Lexer::makeToken(TokenType type) {
-	return makeToken(type, reader.substrFrom(currentPosition));
-};
-
-Token Lexer::makeToken(TokenType type, string_view lexeme) {
+Token Lexer::makeToken(TokenType type) const {
 	return Token{
-		lexeme,
+		reader.substrFrom(currentPosition),
 		type,
-		currentPosition
+		currentPosition.compact()
+	};
+}
+
+Error Lexer::error(string msg) const {
+	return Error {
+		currentPosition,
+		reader.position.index - currentPosition.index,
+		std::move(msg)
 	};
 };

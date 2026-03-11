@@ -1,53 +1,48 @@
 #pragma once
-#include <optional>
+#include <unordered_set>
 #include <vector>
+#include <expected>
 
+#include "common/region.h"
 #include "common/token.h"
+#include "tokenfactory.h"
 #include "reader/reader.h"
 
 class Lexer {
     Reader &reader;
-    Position currentPosition;
+    BigPosition currentPosition;
+    Region errors;
+    std::unordered_set<Error*> errorsList;
+    TokenFactory tf;
+
+    friend class TokenFactory;
 
     public:
-        Lexer(Reader&);
+        explicit Lexer(Reader&);
         std::vector<Token> tokenizeAll();
         Token nextToken();
 
     private:
-        void skipWhitespace() const;
+        void skipWhitespace();
+        Token scanSymbol();
 
-    Token scanSymbol();
+        Token scanDigit();
+        Token scanDigitPrefixed(char maxValid);
+        void scanDigitStandard();
+        Token scanDigitExponent();
+        std::expected<bool, Error> maybeFloat(bool isFloat) const;
+        std::expected<char, Error> getMaxFromPrefix(char c) const;
 
-    Token scanDigit();
+        Token scanChar();
+        Token scanString();
+        std::optional<Error> processEscSeq();
+        Token scanOperator();
+        Token scanPunct();
 
-    void scanDigitPrefixed();
+        void skipComment();
+        void skipBefore(const char *endingSeq);
 
-    void scanDigitStandard(bool &isFloat);
+        Token makeToken(TokenType) const;
 
-    void scanDigitExponent();
-
-    bool maybeFloat(bool isFloat, bool isExponent);
-
-    char getMaxFromPrefix(char c);
-
-    Token scanChar();
-
-    Token scanString();
-
-    void processEscSeq();
-
-    Token scanOperator();
-
-    Token scanPunct();
-
-    void skipSpace();
-
-    void processNewLn();
-
-    void skipComment();
-
-    Token makeToken(TokenType);
-
-    Token makeToken(TokenType type, std::string_view lexeme);
+        Error error(std::string msg) const;
 };

@@ -5,7 +5,7 @@
 #include "common/token.h"
 
 struct Reader {
-    Position position;
+    BigPosition position;
     std::string source;
 
     private:
@@ -19,5 +19,5 @@ struct Reader {
         char readChar() const;
         char readNextChar() const;
         char readCharWithOffset(int = 0) const;
-        std::string_view substrFrom(Position) const;
+        std::string_view substrFrom(BigPosition) const;
 };
