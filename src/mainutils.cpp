@@ -3,6 +3,7 @@
 #include <string>
 #include <iostream>
 
+#include "common/error.h"
 #include "common/token.h"
 using namespace std;
 
@@ -17,4 +18,6 @@ void printToken(const Token &t) {
     cout << "[" << t.position.line
     << ":" << t.position.column << "]";
     cout << '\n';
+    if (t.error)
+        cout << " !!! " << t.error->msg << '\n';
 };

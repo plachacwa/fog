@@ -3,8 +3,8 @@
 #include <cstdlib>
 
 class Region {
-    std::vector<void*> blocks;
-    size_t blockSize = 1024;
+    std::vector<void*> blocks = {};
+    size_t blockSize = 4096;
     char* currentMemory = nullptr;
     size_t usedMemory = 0;
 

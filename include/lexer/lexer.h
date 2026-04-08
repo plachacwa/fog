@@ -6,10 +6,11 @@
 #include "common/region.h"
 #include "common/token.h"
 #include "tokenfactory.h"
-#include "reader/reader.h"
+
+struct IReader;
 
 class Lexer {
-    Reader &reader;
+    IReader &reader;
     BigPosition currentPosition;
     Region errors;
     std::unordered_set<Error*> errorsList;
@@ -18,20 +19,20 @@ class Lexer {
     friend class TokenFactory;
 
     public:
-        explicit Lexer(Reader&);
+        explicit Lexer(IReader &r) noexcept : reader(r), tf(this) {};
         std::vector<Token> tokenizeAll();
         Token nextToken();
 
     private:
-        void skipWhitespace();
-        Token scanSymbol();
+        bool skipWhitespaceIfExist();
+        Token scanSymbolOrFlag(bool isFlag);
 
         Token scanDigit();
-        Token scanDigitPrefixed(char maxValid);
+        Token scanDigitPrefixed(Codepoint maxValid);
         void scanDigitStandard();
         Token scanDigitExponent();
         std::expected<bool, Error> maybeFloat(bool isFloat) const;
-        std::expected<char, Error> getMaxFromPrefix(char c) const;
+        std::expected<Codepoint, Error> getMaxFromPrefix(Codepoint c) const;
 
         Token scanChar();
         Token scanString();
@@ -40,7 +41,6 @@ class Lexer {
         Token scanPunct();
 
         void skipComment();
-        void skipBefore(const char *endingSeq);
 
         Token makeToken(TokenType) const;
 

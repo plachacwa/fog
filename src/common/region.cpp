@@ -8,12 +8,12 @@ void* Region::alloc(size_t size) {
     return ptr;
 };
 
-void Region::allocBlock(size_t size) {
+void Region::allocBlock(const size_t size) {
     currentMemory = static_cast<char*>(std::malloc(size));
     blocks.push_back(currentMemory);
     usedMemory = 0;
 };
 
 Region::~Region() {
-    for (auto block : blocks) std::free(block);
+    for (const auto block : blocks) std::free(block);
 };

@@ -1,0 +1,6 @@
+[submodule "lib/uni-algo"]
+	path = lib/uni-algo
+	url = https://github.com/uni-algo/uni-algo.git
+[submodule "lib/unicode-xid-cpp"]
+	path = lib/unicode-xid-cpp
+	url = https://github.com/lighttransport/unicode-xid-cpp.git

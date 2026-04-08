@@ -1,4 +1,6 @@
 #include "common/token.h"
+
+#include <cassert>
 #include <string_view>
 using namespace std;
 
@@ -9,11 +11,13 @@ string_view Token::type_str() const {
         case TokenType::PrefixedInt:    return "PrefixedInt";
         case TokenType::Exponential:    return "Exponential";
         case TokenType::Symbol:         return "Symbol";
+        case TokenType::PossibleFlag:   return "PossibleFlag";
         case TokenType::Char:           return "Char";
         case TokenType::String:         return "String";
         case TokenType::Operator:       return "Operator";
         case TokenType::Punct:          return "Punctuation";
         case TokenType::End:            return "End";
-        default:                        return "Unknown";
+        case TokenType::Unknown:        return "Unknown";
+        default:                        assert(false);
     };
 };

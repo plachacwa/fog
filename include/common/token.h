@@ -9,9 +9,10 @@ struct CompactPosition {
     int column = 1;
 };
 struct BigPosition {
-    int index  = 0;
-    int line   = 1;
-    int column = 1;
+    int index       = 0;
+    int rawIndex   = 0;
+    int line        = 1;
+    int column      = 1;
 
     [[nodiscard]] CompactPosition compact() const {
         return CompactPosition{line, column};
@@ -24,6 +25,7 @@ enum class TokenType {
     PrefixedInt,
     Exponential,
     Symbol,
+    PossibleFlag,
     Char,
     String,
     Operator,
@@ -38,12 +40,5 @@ struct Token {
     CompactPosition position;
     Error *error = nullptr;
 
-    std::string_view type_str() const;
-};
-
-struct OptToken {
-    std::optional<std::string_view> lexeme;
-    std::optional<TokenType> type;
-    std::optional<BigPosition> position;
-    Error *error = nullptr;
+    [[nodiscard]] std::string_view type_str() const;
 };

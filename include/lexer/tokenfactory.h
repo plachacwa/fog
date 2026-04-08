@@ -7,15 +7,21 @@
 #include "common/error.h"
 
 class Lexer;
-class Reader;
+class StandardReader;
 
 class TokenFactory {
     Lexer       *lexer;
-    OptToken     t;
     public: bool isFailed = false;
 
+    struct {
+        std::optional<std::string_view> lexeme;
+        std::optional<TokenType> type;
+        std::optional<BigPosition> position;
+        Error *error = nullptr;
+    } t;
+
     private:
-        using Checker = std::function<bool(char)>;
+        using Checker = std::function<bool(Codepoint)>;
         using Proc    = std::function<void()>;
 
     public:
@@ -50,6 +56,4 @@ class TokenFactory {
         TokenFactory& matchingTemplate
             (const Checker&, const Proc&,
              bool, std::optional<Error>&& = std::nullopt);
-
-
 };
