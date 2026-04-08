@@ -21,6 +21,7 @@ class Lexer {
     public:
         explicit Lexer(IReader &r) noexcept : reader(r), tf(this) {};
         std::vector<Token> tokenizeAll();
+
         Token nextToken();
 
     private:
@@ -39,6 +40,8 @@ class Lexer {
         std::optional<Error> processEscSeq();
         Token scanOperator();
         Token scanPunct();
+
+        Token scanDirective();
 
         void skipComment();
 

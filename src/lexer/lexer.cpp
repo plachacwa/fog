@@ -5,6 +5,7 @@
 #include "lexer/charsets.h"
 #include "reader/ireader.h"
 #include "lexer/tokenfactory.h"
+#include "lexer/keywords.h"
 
 using namespace std;
 
@@ -26,15 +27,16 @@ Token Lexer::nextToken() {
     currentPosition	  = reader.position();
     const Codepoint c = reader.readChar();
 
-    if (c == '\0')             return makeToken(TokenType::End);
-	if (c == '\'')             return scanChar();
-	if (c == '"')              return scanString();
+    if (c == '\0')            return makeToken(TokenType::End);
+	if (c == '\'')            return scanChar();
+	if (c == '"')             return scanString();
+	if (c == '#')			  return scanDirective();
 	if (reader.readNextChar() == '-' && (c == '-' || c == '{'))
 		skipComment();
-    if (Charset::Digit(c))     return scanDigit();
-    if (Charset::SymStart(c))  return scanSymbolOrFlag(!hadWhitespace);
-    if (Charset::Operator(c))  return scanOperator();
-	if (Charset::Punct(c))	   return scanPunct();
+    if (Charset::Digit(c))    return scanDigit();
+    if (Charset::SymStart(c)) return scanSymbolOrFlag(!hadWhitespace);
+    if (Charset::Operator(c)) return scanOperator();
+	if (Charset::Punct(c))	  return scanPunct();
 
     return makeToken(TokenType::Unknown);
 };
@@ -47,10 +49,16 @@ bool Lexer::skipWhitespaceIfExist() {
 };
 
 Token Lexer::scanSymbolOrFlag(const bool isFlag) {
-	return tf.one()
+	Token t = tf.one()
 		.maybeMany(Charset::SymCont)
 		.type(isFlag ? TokenType::PossibleFlag : TokenType::Symbol)
 		.token();
+
+	if (auto kw = getKeyword(t.lexeme); kw.has_value())
+		t.type = static_cast<int>(*kw) < 50
+			   ? TokenType::Keyword
+			   : TokenType::WeakKeyword;
+	return t;
 };
 
 // ===============
@@ -208,6 +216,16 @@ Token Lexer::scanOperator() {
 Token Lexer::scanPunct() {
 	reader.move();
 	return makeToken(TokenType::Punct);
+}
+
+Token Lexer::scanDirective() {
+	return tf.one()
+		.many([](Codepoint c) {
+			return Charset::AnyExceptNull(c)
+				&& !std::ranges::contains("\n;{(", c);
+		})
+		.type(TokenType::Directive)
+		.token();
 };
 
 /* Comments have that syntax:

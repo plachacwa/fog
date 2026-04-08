@@ -16,7 +16,7 @@ O_FILES := $(CPP_FILES:src/%.cpp=obj/%.o) \
 
 COMPILED_FLAGS := -g -pedantic -W -Wall \
 				-Wno-missing-field-initializers -Wno-pedantic -Wno-comment -fno-inline -O0 -std=c++23
-LINKED_FLAGS   := 
+LINKED_FLAGS   :=
 
 INCLUDE   := -Iinclude -I$(UNIALGO_DIR)/include -I$(UNIXID_DIR)
 LIBRARIES := -Llib

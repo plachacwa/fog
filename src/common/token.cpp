@@ -10,8 +10,11 @@ string_view Token::type_str() const {
         case TokenType::Float:          return "Float";
         case TokenType::PrefixedInt:    return "PrefixedInt";
         case TokenType::Exponential:    return "Exponential";
+        case TokenType::Keyword:        return "Keyword";
+        case TokenType::WeakKeyword:    return "WeakKeyword";
         case TokenType::Symbol:         return "Symbol";
         case TokenType::PossibleFlag:   return "PossibleFlag";
+        case TokenType::Directive:      return "Directive";
         case TokenType::Char:           return "Char";
         case TokenType::String:         return "String";
         case TokenType::Operator:       return "Operator";

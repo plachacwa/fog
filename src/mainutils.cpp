@@ -13,10 +13,9 @@ optional<string> getPath(int argc, char* argv[]) {
 };
 
 void printToken(const Token &t) {
-    cout << t.type_str() << ": ";
-    cout << t.lexeme << " ";
-    cout << "[" << t.position.line
-    << ":" << t.position.column << "]";
+    cout << right << setw(15) << t.type_str() << ": ";
+    cout << left  << setw(30) << t.lexeme << " ";
+    cout << "[" << t.position.line << ":" << t.position.column << "]";
     cout << '\n';
     if (t.error)
         cout << " !!! " << t.error->msg << '\n';
