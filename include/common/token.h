@@ -20,19 +20,28 @@ struct BigPosition {
 };
 
 enum class TokenType {
+    // Value types
     Integer,
     Float,
     PrefixedInt,
     Exponential,
-    Keyword,
-    WeakKeyword,
-    Symbol,
-    PossibleFlag,
-    Directive,
     Char,
     String,
+    // Symbol type
+    Symbol,
+    PossibleFlag,
+    // Special types
+    WeakKeyword,
+    Keyword,
     Operator,
-    Punct,
+    // Less-semantic types
+    Directive,
+    LCB, // {   Left  Curly  Bracket, 12
+    RCB, // }   Right Curly  Bracket, 13
+    LSB, // [   Left  Square Bracket, 14
+    RSB, // ]   Right Square Bracket, 15
+    LRB, // (   Left  Round  Bracket, 16
+    RRB, // )   Right Round  Bracket, 17
     Unknown,
     End,
 };

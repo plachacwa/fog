@@ -1,15 +1,15 @@
-#include <iostream>
 #include <optional>
 
+#include "lexer/lexer.h"
 #include "reader/standardreader.h"
 #include "reader/utfreader.h"
-#include "lexer/lexer.h"
+#include "parser/parser.h"
 using namespace std;
 
 optional<string> getPath(int argc, char* argv[]);
 void printToken(const Token &t);
 
-int main(int argc, char* argv[]) {
+int main( const int argc, char* argv[]) {
     const auto code = getPath(argc, argv).and_then(readFile);
     if (!code) return 1;
 

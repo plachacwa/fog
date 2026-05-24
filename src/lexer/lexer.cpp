@@ -222,8 +222,9 @@ Token Lexer::scanDirective() {
 	return tf.one()
 		.many([](Codepoint c) {
 			return Charset::AnyExceptNull(c)
-				&& !std::ranges::contains("\n;{(", c);
+				&& !std::ranges::contains(string_view("\n;{("), c);
 		})
+		.maybeOne([](Codepoint c) { return c == ';'; })
 		.type(TokenType::Directive)
 		.token();
 };

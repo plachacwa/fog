@@ -7,8 +7,11 @@ UNIALGO_OBJ := obj_ext/uni_algo_data.o
 
 UNIXID_DIR  := lib/unicode-xid-cpp
 
+PLFHIVE_DIR := lib/plf_hive
+
 CPP_FILES := $(wildcard src/*.cpp src/*/*.cpp src/*/*/*.cpp src/*/*/*/*.cpp)
 RC_FILES := $(wildcard res/*.rc)
+
 
 O_FILES := $(CPP_FILES:src/%.cpp=obj/%.o) \
            $(RC_FILES:res/%.rc=obj/%.o) \
@@ -18,7 +21,7 @@ COMPILED_FLAGS := -g -pedantic -W -Wall \
 				-Wno-missing-field-initializers -Wno-pedantic -Wno-comment -fno-inline -O0 -std=c++23
 LINKED_FLAGS   :=
 
-INCLUDE   := -Iinclude -I$(UNIALGO_DIR)/include -I$(UNIXID_DIR)
+INCLUDE   := -Iinclude -I$(UNIALGO_DIR)/include -I$(UNIXID_DIR) -I$(PLFHIVE_DIR)
 LIBRARIES := -Llib
 LIB_FILES := -static-libstdc++ -static-libgcc -static
 

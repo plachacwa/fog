@@ -19,7 +19,7 @@ namespace Charset {
     constexpr Checker SymCont        = [](Codepoint c) { return xid::is_xid_continue(c) || c == '\'';  };
     constexpr Checker Whitespace     = [](Codepoint c) { return ext::is_whitespace(c);  };
     constexpr Checker Operator       = [](Codepoint c) {
-        return std::ranges::contains("!$%&*+,-./<=>?@^`|~", c);
+        return std::ranges::contains(std::string_view("!$%&*+,-./<=>?@^`|~"), c);
     };
     constexpr Checker Punct          = [](Codepoint c) {
         return std::ranges::contains("()[]{};:", c);
@@ -27,6 +27,6 @@ namespace Charset {
     constexpr Checker PlusMinus      = [](Codepoint c) { return c == '+' || c == '-'; };
     constexpr Checker ExponentPrefix = [](Codepoint c) { return c == 'e' || c == 'E'; };
     constexpr Checker OneCharEscSeqs    = [](Codepoint c) {
-        return std::ranges::contains(R"("'\nrt0be)", c);
+        return std::ranges::contains(std::string_view(R"("'\nrt0be)"), c);
     };
 };

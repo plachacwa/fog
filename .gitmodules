@@ -4,3 +4,6 @@
 [submodule "lib/unicode-xid-cpp"]
 	path = lib/unicode-xid-cpp
 	url = https://github.com/lighttransport/unicode-xid-cpp.git
+[submodule "lib/plf_hive"]
+	path = lib/plf_hive
+	url = https://github.com/mattreecebentley/plf_hive.git
