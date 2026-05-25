@@ -4,6 +4,7 @@
 #include "reader/standardreader.h"
 #include "reader/utfreader.h"
 #include "parser/parser.h"
+#include "parser/optable.h"
 using namespace std;
 
 optional<string> getPath(int argc, char* argv[]);

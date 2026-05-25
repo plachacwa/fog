@@ -1,8 +1,8 @@
 #pragma once
-#include <locale>
 #include <algorithm>
-#include <uni_algo/prop.h>
+#include <locale>
 #include <unicode-xid.hh>
+#include <uni_algo/prop.h>
 
 #include "lexer/u8char.h"
 

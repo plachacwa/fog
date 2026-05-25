@@ -1,11 +1,11 @@
 #include "lexer/lexer.h"
 
-#include <cassert>
+#include <ranges>
 
 #include "lexer/charsets.h"
-#include "reader/ireader.h"
-#include "lexer/tokenfactory.h"
 #include "lexer/keywords.h"
+#include "lexer/tokenfactory.h"
+#include "reader/ireader.h"
 
 using namespace std;
 
@@ -27,18 +27,20 @@ Token Lexer::nextToken() {
     currentPosition	  = reader.position();
     const Codepoint c = reader.readChar();
 
-    if (c == '\0')            return makeToken(TokenType::End);
+    if (c == '\0')            return tf.type(TokenType::End).token();
 	if (c == '\'')            return scanChar();
 	if (c == '"')             return scanString();
 	if (c == '#')			  return scanDirective();
-	if (reader.readNextChar() == '-' && (c == '-' || c == '{'))
-		skipComment();
+	if (reader.readNextChar() == '-' && (c == '-' || c == '{')) {
+        skipComment();
+        return nextToken();
+    };
     if (Charset::Digit(c))    return scanDigit();
     if (Charset::SymStart(c)) return scanSymbolOrFlag(!hadWhitespace);
     if (Charset::Operator(c)) return scanOperator();
 	if (Charset::Punct(c))	  return scanPunct();
 
-    return makeToken(TokenType::Unknown);
+    return tf.type(TokenType::Unknown).token();
 };
 
 bool Lexer::skipWhitespaceIfExist() {
@@ -66,11 +68,11 @@ Token Lexer::scanSymbolOrFlag(const bool isFlag) {
 // ===============
 
 Token Lexer::scanDigit() {
-	if (expected maxValid = getMaxFromPrefix(reader.readNextChar());
+	if (const auto maxValid = getMaxDigitFromPrefix(reader.readNextChar());
 		reader.readChar() == '0' && maxValid.has_value() && *maxValid != '\0')
 		return scanDigitPrefixed(maxValid.value());
 	else if (!maxValid)
-		tf.pushError(std::move(maxValid.error()));
+		tf.pushError("characters from a different number system");
 
 	scanDigitStandard();
 
@@ -112,9 +114,9 @@ Token Lexer::scanDigitExponent() {
 		.many(Charset::Digit)
 		.errorIfFailed("expected digits in exponent");
 	if (Charset::SymCont( reader.readChar() ))
-		tf.pushError(error("flags for exponential notation is prohibited"));
+		tf.pushError("flags for exponential notation is prohibited");
 	if (reader.readChar() == '.')
-		tf.pushError(error("dot in exponent"));
+		tf.pushError("dot in exponent");
 	return tf.type(TokenType::Exponential).token();
 };
 
@@ -133,14 +135,12 @@ expected<bool, Error> Lexer::maybeFloat(const bool isFloat) const {
 	return false;
 }
 
-expected<Codepoint, Error> Lexer::getMaxFromPrefix(Codepoint c) const {
+std::optional<Codepoint> Lexer::getMaxDigitFromPrefix(Codepoint c) {
 	if (c == 'x' || c == 'X') return 'F';
 	if (c == 'o' || c == 'O') return '7';
 	if (c >= '0' && c <= '7') return '7';
 	if (c == 'b' || c == 'B') return '1';
-	if (c == '8' || c == '9') return unexpected(
-		error("characters from a different number system")
-	);
+	if (c == '8' || c == '9') return nullopt;
 	return '\0';
 };
 
@@ -157,7 +157,7 @@ Token Lexer::scanChar() {
 		reader.move();
 
 	if (reader.readChar() != '\'')
-		tf.pushError(error("unclosed char literal"));
+		tf.pushError("unclosed char literal");
 	reader.move(); // skip closing '
 	return tf.type(TokenType::Char).token();
 };
@@ -177,7 +177,7 @@ Token Lexer::scanString() {
 			if (auto err = processEscSeq())
 				tf.pushError(std::move(*err));
 		if (c == '\0') {
-			tf.pushError(error("unclosed string literal"));
+			tf.pushError("unclosed string literal");
 			break;
 		};
 		if (c == '"') {
@@ -211,12 +211,26 @@ Token Lexer::scanOperator() {
 	return tf.many(Charset::Operator)
 			.type(TokenType::Operator)
 			.token();
-};
+}
 
 Token Lexer::scanPunct() {
-	reader.move();
-	return makeToken(TokenType::Punct);
-}
+    constexpr array<pair<char, TokenType>, 8> char2type = {
+        pair{'{', TokenType::LCB},
+        pair{'}', TokenType::RCB},
+        pair{'[', TokenType::LSB},
+        pair{']', TokenType::RSB},
+        pair{'(', TokenType::LRB},
+        pair{')', TokenType::RRB},
+        pair{':', TokenType::Colon},
+        pair{';', TokenType::Semicolon}
+    };
+    const auto punctType = ranges::find(
+        char2type,
+        reader.readChar(),
+        []( const pair<char, TokenType> &p ) { return p.first; }
+    )->second;
+    return tf.type(punctType).one().token();
+};
 
 Token Lexer::scanDirective() {
 	return tf.one()
@@ -257,14 +271,6 @@ void Lexer::skipComment() {
 		reader.move();
 	}
 };
-
-Token Lexer::makeToken(const TokenType type) const {
-	return Token {
-		reader.substrFrom(currentPosition),
-		type,
-		currentPosition.compact()
-	};
-}
 
 Error Lexer::error(string msg) const {
 	return Error {
