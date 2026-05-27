@@ -16,9 +16,12 @@ int main( const int argc, char* argv[]) {
 
     auto reader = UTFReader(string_view(*code));
     auto tokens  = Lexer(reader).tokenizeAll();
+	Region ctx{};
+	const auto node = Parser(tokens, ctx).parseExpression();
 
     for (auto &t : tokens)
         printToken(t);
+    node->print();
 
     return 0;
 };
