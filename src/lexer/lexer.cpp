@@ -10,57 +10,56 @@
 using namespace std;
 
 vector<Token> Lexer::tokenizeAll() {
-    vector<Token> tokens;
-	tokens.reserve(reader.sourceSize() / 4);
+    tokens.reserve(reader.sourceSize() / 4);
     Token token = nextToken();
 
-    while ( token.type != TokenType::End ) {
+    while (token.type != TokenType::End) {
         tokens.push_back(token);
         token = nextToken();
     };
-
+    
     return tokens;
-}
+};
 
 Token Lexer::nextToken() {
     const bool hadWhitespace = skipWhitespaceIfExist();
-    currentPosition	  = reader.position();
-    const Codepoint c = reader.readChar();
+    currentPosition          = reader.position();
+    const Codepoint c        = reader.readChar();
 
-    if (c == '\0')            return tf.type(TokenType::End).token();
-	if (c == '\'')            return scanChar();
-	if (c == '"')             return scanString();
-	if (c == '#')			  return scanDirective();
-	if (reader.readNextChar() == '-' && (c == '-' || c == '{')) {
+    if (c == '\0') return tf.type(TokenType::End).token();
+    if (c == '\'') return scanChar();
+    if (c == '"') return scanString();
+    if (c == '#') return scanDirective();
+    if (reader.readNextChar() == '-' && (c == '-' || c == '{')) {
         skipComment();
         return nextToken();
     };
-    if (Charset::Digit(c))    return scanDigit();
+    if (Charset::Digit(c)) return scanDigit();
     if (Charset::SymStart(c)) return scanSymbolOrFlag(!hadWhitespace);
     if (Charset::Operator(c)) return scanOperator();
-	if (Charset::Punct(c))	  return scanPunct();
+    if (Charset::Punct(c)) return scanPunct();
 
     return tf.type(TokenType::Unknown).token();
 };
 
 bool Lexer::skipWhitespaceIfExist() {
-	const bool hadWhitespace =
-		!tf.many(Charset::Whitespace).isFailed;
-	tf.clear();
-	return hadWhitespace;
+    const bool hadWhitespace =
+            !tf.many(Charset::Whitespace).isFailed;
+    tf.clear();
+    return hadWhitespace;
 };
 
 Token Lexer::scanSymbolOrFlag(const bool isFlag) {
-	Token t = tf.one()
-		.maybeMany(Charset::SymCont)
-		.type(isFlag ? TokenType::PossibleFlag : TokenType::Symbol)
-		.token();
+    Token t = tf.one()
+                .maybeMany(Charset::SymCont)
+                .type(isFlag ? TokenType::PossibleFlag : TokenType::Symbol)
+                .token();
 
-	if (auto kw = getKeyword(t.lexeme); kw.has_value())
-		t.type = static_cast<int>(*kw) < 50
-			   ? TokenType::Keyword
-			   : TokenType::WeakKeyword;
-	return t;
+    if (auto kw = getKeyword(t.lexeme); kw.has_value())
+        t.type = static_cast<int>(*kw) < 50
+                 ? TokenType::Keyword
+                 : TokenType::WeakKeyword;
+    return t;
 };
 
 // ===============
@@ -68,80 +67,82 @@ Token Lexer::scanSymbolOrFlag(const bool isFlag) {
 // ===============
 
 Token Lexer::scanDigit() {
-	if (const auto maxValid = getMaxDigitFromPrefix(reader.readNextChar());
-		reader.readChar() == '0' && maxValid.has_value() && *maxValid != '\0')
-		return scanDigitPrefixed(maxValid.value());
-	else if (!maxValid)
-		tf.pushError("characters from a different number system");
+    if (const auto maxValid = getMaxDigitFromPrefix(reader.readNextChar());
+        reader.readChar() == '0' && maxValid.has_value() && *maxValid != '\0')
+        return scanDigitPrefixed(maxValid.value());
+    else if (!maxValid)
+        tf.pushError("characters from a different number system");
 
-	scanDigitStandard();
+    scanDigitStandard();
 
-	if (Charset::ExponentPrefix( reader.readChar() ))
-		return scanDigitExponent();
-	else
-		return tf.token();
+    if (Charset::ExponentPrefix(reader.readChar()))
+        return scanDigitExponent();
+    else
+        return tf.token();
 };
 
 Token Lexer::scanDigitPrefixed(const Codepoint maxValid) {
-	return tf.one()
-			.many(Charset::SymCont)
-			.forEachReaden([&maxValid](const char c) {
-				return static_cast<unsigned int>(toupper(c)) <= maxValid;
-			})
-			.errorIfFailed("characters from a different number system")
-			.type(TokenType::PrefixedInt)
-			.token();
+    return tf.one()
+             .many(Charset::SymCont)
+             .forEachReaden(
+                  [&maxValid](const char c) {
+                      return static_cast<unsigned int>(toupper(c)) <= maxValid;
+                  }
+              )
+             .errorIfFailed("characters from a different number system")
+             .type(TokenType::PrefixedInt)
+             .token();
 }
 
 void Lexer::scanDigitStandard() {
-	bool isFloat = false;
-	while (!tf.many(Charset::Digit).isFailed) {
-		if (reader.readChar() == '.') {
-			if (expected floatOrErr = maybeFloat(isFloat); floatOrErr.has_value())
-				isFloat = *floatOrErr;
-			else {
-				tf.pushError(std::move(floatOrErr.error()));
-				break;
-			}
-		} else break;
-	};
-	tf.ignoreFail().type(isFloat ? TokenType::Float : TokenType::Integer);
+    bool isFloat = false;
+    while (!tf.many(Charset::Digit).isFailed) {
+        if (reader.readChar() == '.') {
+            if (expected floatOrErr = maybeFloat(isFloat); floatOrErr.has_value())
+                isFloat = *floatOrErr;
+            else {
+                tf.pushError(floatOrErr.error());
+                break;
+            }
+        } else break;
+    };
+    tf.ignoreFail().type(isFloat ? TokenType::Float : TokenType::Integer);
 };
 
 Token Lexer::scanDigitExponent() {
-	tf.one()
-		.maybeOne(Charset::PlusMinus)
-		.many(Charset::Digit)
-		.errorIfFailed("expected digits in exponent");
-	if (Charset::SymCont( reader.readChar() ))
-		tf.pushError("flags for exponential notation is prohibited");
-	if (reader.readChar() == '.')
-		tf.pushError("dot in exponent");
-	return tf.type(TokenType::Exponential).token();
+    tf.one()
+      .maybeOne(Charset::PlusMinus)
+      .many(Charset::Digit)
+      .errorIfFailed("expected digits in exponent");
+    if (Charset::SymCont(reader.readChar()))
+        tf.pushError("flags for exponential notation is prohibited");
+    if (reader.readChar() == '.')
+        tf.pushError("dot in exponent");
+    return tf.type(TokenType::Exponential).token();
 };
 
 // Cursor is located at the dot.
 // Function checks whether the char after the dot (cursor + 1 char) is a digit,
 // and whether the dot is the first dot in the number.
-expected<bool, Error> Lexer::maybeFloat(const bool isFloat) const {
-	const Codepoint next = reader.readNextChar();
-	if (Charset::Digit(next)) {
-		if (isFloat) return unexpected(error("multiple decimal dots in the number"));
-		else		 return true;
-	};
-	if (Charset::Whitespace(next) || Charset::Punct(next))
-		return unexpected(error("hanging point after a digit is prohibited"));
+expected<bool, string> Lexer::maybeFloat(const bool isFloat) const {
+    const Codepoint next = reader.readNextChar();
+    if (Charset::Digit(next)) {
+        if (isFloat) return unexpected("multiple decimal dots in the number");
+        else return true;
+    };
+    if (Charset::Whitespace(next) || Charset::Punct(next))
+        return unexpected("hanging point after a digit is prohibited");
 
-	return false;
+    return false;
 }
 
-std::optional<Codepoint> Lexer::getMaxDigitFromPrefix(Codepoint c) {
-	if (c == 'x' || c == 'X') return 'F';
-	if (c == 'o' || c == 'O') return '7';
-	if (c >= '0' && c <= '7') return '7';
-	if (c == 'b' || c == 'B') return '1';
-	if (c == '8' || c == '9') return nullopt;
-	return '\0';
+std::optional<Codepoint> Lexer::getMaxDigitFromPrefix(const Codepoint c) {
+    if (c == 'x' || c == 'X') return 'F';
+    if (c == 'o' || c == 'O') return '7';
+    if (c >= '0' && c <= '7') return '7';
+    if (c == 'b' || c == 'B') return '1';
+    if (c == '8' || c == '9') return nullopt;
+    return '\0';
 };
 
 // ===============
@@ -149,98 +150,100 @@ std::optional<Codepoint> Lexer::getMaxDigitFromPrefix(Codepoint c) {
 // ===============
 
 Token Lexer::scanChar() {
-	reader.move(); // skip opening '
-	if (reader.readChar() == '\\') {
-		if (auto err = processEscSeq())
-			tf.pushError(std::move(*err));
-	} else
-		reader.move();
+    reader.move(); // skip opening '
+    if (reader.readChar() == '\\') {
+        if (const auto err = processEscSeq())
+            tf.pushError(*err);
+    } else
+        reader.move();
 
-	if (reader.readChar() != '\'')
-		tf.pushError("unclosed char literal");
-	reader.move(); // skip closing '
-	return tf.type(TokenType::Char).token();
+    if (reader.readChar() != '\'')
+        tf.pushError("unclosed char literal");
+    reader.move(); // skip closing '
+    return tf.type(TokenType::Char).token();
 };
 
 Token Lexer::scanString() {
-	reader.move(); // skip opening "
+    reader.move(); // skip opening "
 
-	const Charset::Checker InsignificantChars = [](const Codepoint c) {
-		return Charset::AnyExceptNull(c) && c != '"' && c != '\\';
-	};
+    const Charset::Checker InsignificantChars = [](const Codepoint c) {
+        return Charset::AnyExceptNull(c) && c != '"' && c != '\\';
+    };
 
-	while (true) {
-		tf.maybeMany(InsignificantChars);
-		const Codepoint c = reader.readChar();
+    while (true) {
+        tf.maybeMany(InsignificantChars);
+        const Codepoint c = reader.readChar();
 
-		if (c == '\\')
-			if (auto err = processEscSeq())
-				tf.pushError(std::move(*err));
-		if (c == '\0') {
-			tf.pushError("unclosed string literal");
-			break;
-		};
-		if (c == '"') {
-			reader.move();
-			break;
-		};
-	};
+        if (c == '\\')
+            if (auto err = processEscSeq())
+                tf.pushError(*err);
+        if (c == '\0') {
+            tf.pushError("unclosed string literal");
+            break;
+        };
+        if (c == '"') {
+            reader.move();
+            break;
+        };
+    };
 
-	return tf.type(TokenType::String).token();
+    return tf.type(TokenType::String).token();
 };
 
 // The function considers that cursor is on the \
 // and does not check if this is really the case.
-optional<Error> Lexer::processEscSeq() {
-	reader.move();
-	const Codepoint c = reader.readChar();
-	int length = 0;
+optional<string> Lexer::processEscSeq() {
+    reader.move();
+    const Codepoint c      = reader.readChar();
+    int             length = 0;
 
-	if (Charset::OneCharEscSeqs(c)) length = 1;
-	else if (c == 'x')	length = 3;
-	else if (c == 'u')	length = 5;
-	else if (c == 'U')	length = 9;
-	else
-		return error("invalid escape sequence");
+    if (Charset::OneCharEscSeqs(c)) length = 1;
+    else if (c == 'x') length = 3;
+    else if (c == 'u') length = 5;
+    else if (c == 'U') length = 9;
+    else
+        return "invalid escape sequence";
 
-	reader.move(length);
-	return nullopt;
+    reader.move(length);
+    return nullopt;
 };
 
 Token Lexer::scanOperator() {
-	return tf.many(Charset::Operator)
-			.type(TokenType::Operator)
-			.token();
+    return tf.many(Charset::Operator)
+             .type(TokenType::Operator)
+             .token();
 }
 
 Token Lexer::scanPunct() {
     constexpr array<pair<char, TokenType>, 8> char2type = {
-        pair{'{', TokenType::LCB},
-        pair{'}', TokenType::RCB},
-        pair{'[', TokenType::LSB},
-        pair{']', TokenType::RSB},
-        pair{'(', TokenType::LRB},
-        pair{')', TokenType::RRB},
-        pair{':', TokenType::Colon},
-        pair{';', TokenType::Semicolon}
+        pair{ '{', TokenType::LCB },
+        pair{ '}', TokenType::RCB },
+        pair{ '[', TokenType::LSB },
+        pair{ ']', TokenType::RSB },
+        pair{ '(', TokenType::LRB },
+        pair{ ')', TokenType::RRB },
+        pair{ ':', TokenType::Colon },
+        pair{ ';', TokenType::Semicolon }
     };
     const auto punctType = ranges::find(
         char2type,
         reader.readChar(),
-        []( const pair<char, TokenType> &p ) { return p.first; }
+        [](const pair<char, TokenType> &p) { return p.first; }
     )->second;
     return tf.type(punctType).one().token();
 };
 
 Token Lexer::scanDirective() {
-	return tf.one()
-		.many([](Codepoint c) {
-			return Charset::AnyExceptNull(c)
-				&& !std::ranges::contains(string_view("\n;{("), c);
-		})
-		.maybeOne([](Codepoint c) { return c == ';'; })
-		.type(TokenType::Directive)
-		.token();
+    return tf.one()
+             .many(
+                  [](const Codepoint c) {
+                      return Charset::AnyExceptNull(c)
+                              && !std::ranges::contains(string_view("\n;{("), c);
+                  }
+              )
+             .maybeOne([](const Codepoint c) { return c == ';'; })
+             .type(TokenType::Directive)
+             .token();
 };
 
 /* Comments have that syntax:
@@ -249,33 +252,25 @@ Token Lexer::scanDirective() {
  *                comment -}
  */
 void Lexer::skipComment() {
-	const string_view endingSeq = (reader.readChar() == '{') ? "-}" : "\n";
-	reader.move(2);
+    const string_view endingSeq = (reader.readChar() == '{') ? "-}" : "\n";
+    reader.move(2);
 
-	const Charset::Checker InsignificantChars = [](const Codepoint c) {
-		return Charset::AnyExceptNull(c) && c != '-' && c != '{' && c != '\n';
-	};
+    const Charset::Checker InsignificantChars = [](const Codepoint c) {
+        return Charset::AnyExceptNull(c) && c != '-' && c != '{' && c != '\n';
+    };
 
-	while (true) {
-		tf.maybeMany(InsignificantChars);
-		const char c = reader.readUtf8Char().ascii();
+    while (true) {
+        tf.maybeMany(InsignificantChars);
+        const char c = reader.readUtf8Char().ascii();
 
-		if (c == '{') skipComment();
-		if (c == '\0') return;
-		if (c == endingSeq[0]) {
-			const string_view possibleSeq =
-				string_view(reader.readUtf8Char().ptr())
-				.substr(0, endingSeq.length());
-			if (possibleSeq == endingSeq) return;
-		};
-		reader.move();
-	}
-};
-
-Error Lexer::error(string msg) const {
-	return Error {
-		currentPosition,
-		reader.position().index - currentPosition.index,
-		std::move(msg)
-	};
+        if (c == '{') skipComment();
+        if (c == '\0') return;
+        if (c == endingSeq[0]) {
+            const string_view possibleSeq =
+                    string_view(reader.readUtf8Char().ptr())
+                   .substr(0, endingSeq.length());
+            if (possibleSeq == endingSeq) return;
+        };
+        reader.move();
+    }
 };
