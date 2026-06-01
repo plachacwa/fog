@@ -1,11 +1,9 @@
 #include "lexer/lexer.h"
-
-#include <ranges>
-
 #include "lexer/charsets.h"
 #include "lexer/keywords.h"
 #include "lexer/tokenfactory.h"
 #include "reader/ireader.h"
+#include "utils/converter.h"
 
 using namespace std;
 
@@ -84,7 +82,8 @@ Token Lexer::scanDigit() {
 Token Lexer::scanDigitPrefixed(const Codepoint maxValid) {
     return tf.one()
              .many(Charset::SymCont)
-             .forEachReaden(
+             .forEachReadenFrom(
+                 currentPosition.index+2,
                   [&maxValid](const char c) {
                       return static_cast<unsigned int>(toupper(c)) <= maxValid;
                   }
@@ -215,7 +214,7 @@ Token Lexer::scanOperator() {
 }
 
 Token Lexer::scanPunct() {
-    constexpr array<pair<char, TokenType>, 8> char2type = {
+    const auto punctType = convertByTable<char, TokenType, 8>({
         pair{ '{', TokenType::LCB },
         pair{ '}', TokenType::RCB },
         pair{ '[', TokenType::LSB },
@@ -224,12 +223,8 @@ Token Lexer::scanPunct() {
         pair{ ')', TokenType::RRB },
         pair{ ':', TokenType::Colon },
         pair{ ';', TokenType::Semicolon }
-    };
-    const auto punctType = ranges::find(
-        char2type,
-        reader.readChar(),
-        [](const pair<char, TokenType> &p) { return p.first; }
-    )->second;
+    }, reader.readChar())
+        .value_or(TokenType::Unknown);
     return tf.type(punctType).one().token();
 };
 
@@ -238,7 +233,7 @@ Token Lexer::scanDirective() {
              .many(
                   [](const Codepoint c) {
                       return Charset::AnyExceptNull(c)
-                              && !std::ranges::contains(string_view("\n;{("), c);
+                          && !std::ranges::contains(string_view("\n;{("), c);
                   }
               )
              .maybeOne([](const Codepoint c) { return c == ';'; })

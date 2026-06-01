@@ -2,6 +2,8 @@
 #include "utils/utf8.h"
 #include <uni_algo/ranges_conv.h>
 
+#include "lexer/charsets.h"
+
 using namespace std;
 
 bool UTFReader::move(int steps) {
@@ -15,11 +17,10 @@ bool UTFReader::move(int steps) {
 
         switch (codepoint) {
             case '\0':
+                lines_.back().endIndex = position_.rawIndex-length;
                 return false;
             case '\n':
-                position_.line++;
-                position_.column = 1;
-                bufferNext();
+                updateLine(length);
                 break;
             default:
                 position_.column++;
@@ -29,6 +30,24 @@ bool UTFReader::move(int steps) {
     };
     return true;
 };
+
+void UTFReader::updateLine(const int length) {
+    position_.line++;
+    if (!lines_.empty()) {
+        auto &lastLine = lines_.back();
+        lastLine.endIndex = position_.rawIndex-length;
+        const auto &lastLineText =
+            source.substr(lastLine.startIndex, lastLine.endIndex-lastLine.startIndex);
+        for (const auto &c : lastLineText)
+            if (!Charset::Whitespace(c)) {
+                lines_.back().isEmpty = false;
+                break;
+            };
+    };
+    lines_.push_back({position_.rawIndex, 0});
+    position_.column = 1;
+    bufferNext();
+}
 
 void UTFReader::bufferNext() {
     fillBufferFromTo(0, LIMIT_BUFFER_SIZE);
@@ -65,12 +84,12 @@ void UTFReader::catchLongStrings() {
 
 U8Char UTFReader::getCharPtrOutsideBufferAt(const int offset) const {
     const char *cursor = source.data() + position_.rawIndex;
-    int steps = offset;
+    int steps = std::abs(offset);
 
     while (steps > 0) {
         const size_t remaining = source.data() + source.length() - cursor;
         const auto length = decodeUtf8At(cursor, remaining).second;
-        cursor += length;
+        cursor += offset > 0 ? length : -length;
         steps--;
     };
 

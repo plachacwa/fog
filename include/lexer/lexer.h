@@ -1,51 +1,58 @@
 #pragma once
-#include <unordered_set>
-#include <vector>
 #include <expected>
+#include <plf_hive.h>
+#include <vector>
 
-#include "common/region.h"
-#include "common/token.h"
 #include "tokenfactory.h"
+#include "common/token.h"
 
 struct IReader;
 
 class Lexer {
-    IReader &reader;
-    BigPosition currentPosition;
-    Region errors;
-    std::unordered_set<Error*> errorsList;
-    TokenFactory tf;
+    IReader &         reader;
+    plf::hive<Error>& errors;
+    BigPosition       currentPosition;
+    TokenFactory      tf;
+
+    std::vector<Token> tokens{};
 
     friend class TokenFactory;
 
     public:
-        explicit Lexer(IReader &r) noexcept : reader(r), tf(this) {};
+        explicit Lexer(IReader &r, plf::hive<Error> &e) noexcept : reader(r), errors(e), tf(this) {};
+
         std::vector<Token> tokenizeAll();
 
         Token nextToken();
 
     private:
         bool skipWhitespaceIfExist();
+
         Token scanSymbolOrFlag(bool isFlag);
 
         Token scanDigit();
+
         Token scanDigitPrefixed(Codepoint maxValid);
+
         void scanDigitStandard();
+
         Token scanDigitExponent();
-        std::expected<bool, Error> maybeFloat(bool isFloat) const;
-        std::expected<Codepoint, Error> getMaxFromPrefix(Codepoint c) const;
+
+        [[nodiscard]] std::expected<bool, std::string> maybeFloat(bool isFloat) const;
+
+        [[nodiscard]] static std::optional<Codepoint> getMaxDigitFromPrefix(Codepoint c);
 
         Token scanChar();
+
         Token scanString();
-        std::optional<Error> processEscSeq();
+
+        std::optional<std::string> processEscSeq();
+
         Token scanOperator();
+
         Token scanPunct();
 
         Token scanDirective();
 
         void skipComment();
-
-        Token makeToken(TokenType) const;
-
-        Error error(std::string msg) const;
 };

@@ -25,6 +25,7 @@ static const std::pmr::unordered_map<string_view, Keyword> keywords = {
     {"module",      Keyword::Module     },
     {"move",        Keyword::Move       },
     {"null",        Keyword::Null       },
+    {"override",    Keyword::Override   },
     {"private",     Keyword::Private    },
     {"protected",   Keyword::Protected  },
     {"public",      Keyword::Public     },

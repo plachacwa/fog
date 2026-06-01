@@ -10,7 +10,7 @@ struct CompactPosition {
 };
 struct BigPosition {
     int index       = 0;
-    int rawIndex   = 0;
+    int rawIndex    = 0;
     int line        = 1;
     int column      = 1;
 
@@ -36,12 +36,15 @@ enum class TokenType {
     Operator,
     // Less-semantic types
     Directive,
+    // Punctuation types
     LCB, // {   Left  Curly  Bracket, 12
     RCB, // }   Right Curly  Bracket, 13
     LSB, // [   Left  Square Bracket, 14
     RSB, // ]   Right Square Bracket, 15
     LRB, // (   Left  Round  Bracket, 16
     RRB, // )   Right Round  Bracket, 17
+    Colon,
+    Semicolon,
     Unknown,
     End,
 };
@@ -53,4 +56,10 @@ struct Token {
     Error *error = nullptr;
 
     [[nodiscard]] std::string_view type_str() const;
+};
+
+struct Line {
+    int startIndex = 0;
+    int endIndex   = 0;
+    bool isEmpty   = true;
 };

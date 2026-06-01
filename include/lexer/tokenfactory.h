@@ -20,6 +20,8 @@ class TokenFactory {
         Error *error = nullptr;
     } t;
 
+    std::vector<Error*> unclosedErrors;
+
     private:
         using Checker = std::function<bool(Codepoint)>;
         using Proc    = std::function<void()>;
@@ -35,12 +37,13 @@ class TokenFactory {
         TokenFactory& maybeMany (const Checker&);
         TokenFactory& manyBefore(const Checker&, std::optional<Error>&& = std::nullopt);
 
-        TokenFactory& forEachReaden(const Checker&, std::optional<Error> = std::nullopt);
+        TokenFactory& forEachReadenFrom(int, const Checker&, std::optional<Error> = std::nullopt);
         TokenFactory& check        (const std::function<bool()> &);
 
         TokenFactory& ifFailed(const std::function<void()>&);
         TokenFactory& errorIfFailed(const std::string&);
         TokenFactory& pushError(Error&&);
+        TokenFactory& pushError(const std::string&);
         TokenFactory& ignoreFail();
 
         TokenFactory& type(TokenType);

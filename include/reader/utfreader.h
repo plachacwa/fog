@@ -9,6 +9,7 @@ class UTFReader : public IReader {
     BigPosition position_;
     const std::string_view source;
     std::vector<U8Char> bufferView;
+    std::vector<Line> lines_;
 
     public:
         explicit UTFReader(const std::string_view s) : IReader(), source(s) {};
@@ -23,13 +24,14 @@ class UTFReader : public IReader {
             return readUtf8CharAt(offset).ascii();
         };
         [[nodiscard]] U8Char readUtf8CharAt(const int offset) const override {
-            if (isOutsideOfBuffer(offset)) {
+            if (!isOutsideOfBuffer(offset) && !bufferView.empty()) {
                 const int bufIndex = (position_.column-1) % LIMIT_BUFFER_SIZE;
                 return bufferView[bufIndex + offset];
             } else
                 return getCharPtrOutsideBufferAt(offset);
         };
         BigPosition& position() override { return position_; };
+        std::vector<Line>& lines() override { return lines_; };
         [[nodiscard]] std::size_t sourceSize() const override { return source.size(); };
 
     private:
@@ -37,6 +39,7 @@ class UTFReader : public IReader {
         static constexpr int EXPANSION_SIZE = 32;
         static constexpr int LIMIT_BUFFER_SIZE = EXPANDED_BUFFER_SIZE - EXPANSION_SIZE;
 
+        void updateLine(int);
         void bufferNext();
         void expandBuffer();
         void fillBufferFromTo(int, int);

@@ -7,18 +7,25 @@ namespace Builtin {
     using enum Op::Associativity;
     using enum Op::Arity;
 
-    const std::vector<std::vector<Op>> basicOperators = {
-        {
-            { "+", LeftAssociative, Binary },
-            { "+", NonAssociative,  UnaryPrefix },
-            { "-", LeftAssociative, Binary },
-            { "-", NonAssociative,  UnaryPrefix },
-        },
+    const std::vector<std::pair<Op::Associativity, std::vector<Op>>> basicOperators = {
+        {EqAssociative, {
+            { ",", Multiple }
+        }},
+        {LeftAssociative, {
+            { "+", Binary },
+            { "+", UnaryPrefix },
+            { "-", Binary },
+            { "-", UnaryPrefix },
+        }},
+        {LeftAssociative, {
+            { "*", Binary },
+            { "/", Binary },
+        }},
     };
-    const int basicOperatorsCount = []( const std::vector<std::vector<Op>> &operators ){
+    const int basicOperatorsCount = []( const auto &operators ){
         int size = 0;
-        for ( const auto &vec : operators )
-            size += vec.size();
+        for ( const auto &pair : operators )
+            size += pair.second.size();
         return size;
     }( basicOperators );
 };

@@ -3,8 +3,13 @@
 
 #include "token.h"
 
-struct Error {
-    BigPosition position;
+struct Highlighting {
+    BigPosition start;
     int length;
+};
+
+struct Error {
+    Highlighting strongHl;
+    Highlighting weakHl;
     std::string msg;
 };

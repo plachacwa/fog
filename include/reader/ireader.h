@@ -2,11 +2,12 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <vector>
 
 #include "common/token.h"
 #include "lexer/u8char.h"
 
-class IReader {
+struct IReader {
 	public:
 		IReader() = default;
 		virtual ~IReader() = default;
@@ -20,7 +21,8 @@ class IReader {
 		[[nodiscard]] virtual U8Char readUtf8CharAt(int) const = 0;
 		[[nodiscard]] virtual std::string_view substrFrom(BigPosition) const = 0;
 
-		virtual BigPosition& position() = 0;
+		virtual BigPosition&              position()   = 0;
+        virtual std::vector<Line>&        lines() = 0;
 		[[nodiscard]] virtual std::size_t sourceSize() const = 0;
 
 		bool move() { return move(1); };

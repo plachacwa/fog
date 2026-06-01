@@ -1,4 +1,5 @@
 #include "common/token.h"
+#include "utils/interval.h"
 
 #include <cassert>
 #include <string_view>
@@ -18,9 +19,14 @@ string_view Token::type_str() const {
         case TokenType::Char:           return "Char";
         case TokenType::String:         return "String";
         case TokenType::Operator:       return "Operator";
-        case TokenType::Punct:          return "Punctuation";
+        case TokenType::Colon:          return "Colon";
+        case TokenType::Semicolon:      return "Semicolon";
         case TokenType::End:            return "End";
         case TokenType::Unknown:        return "Unknown";
-        default:                        assert(false);
+        default:
+            if (type <= Interval(TokenType::LCB, TokenType::RRB))
+                return "Bracket";
+            else
+                assert(false);
     };
 };

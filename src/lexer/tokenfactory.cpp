@@ -61,10 +61,12 @@ TokenFactory& TokenFactory::manyBefore(const Checker& charsetHas, optional<Error
     );
 }
 
-TokenFactory & TokenFactory::forEachReaden(const Checker &isFit, std::optional<Error> ifNot) {
+TokenFactory & TokenFactory::forEachReadenFrom(
+    const int posIdx, const Checker &isFit, std::optional<Error> ifNot
+) {
     if (isFailed) return *this;
-    for (int i = t.position->index; i < lexer->reader.position().index; i++) {
-        if (!isFit( lexer->reader.readCharAt(lexer->reader.position().index - i) )) {
+    for (int i = posIdx; i < lexer->reader.position().index; i++) {
+        if (!isFit( lexer->reader.readCharAt(i - lexer->reader.position().index) )) {
             if (ifNot.has_value())
                 regError(std::move(*ifNot));
             isFailed = true;
@@ -93,6 +95,10 @@ TokenFactory & TokenFactory::pushError(Error &&e) {
     regError(std::move(e));
     return *this;
 }
+TokenFactory & TokenFactory::pushError(const std::string &msg) {
+    regError(makeError(msg));
+    return *this;
+}
 
 TokenFactory & TokenFactory::ignoreFail() {
     isFailed = false;
@@ -117,7 +123,6 @@ TokenFactory& TokenFactory::matchingTemplate
         if (canBeFailed) isFailed = true;
     };
 
-
     return *this;
 };
 
@@ -130,24 +135,23 @@ Token TokenFactory::token() {
     t.position = lexer->currentPosition;
     if (!t.lexeme) lexeme();
     if (!t.type  ) t.type = TokenType::Unknown;
-    if ( t.error ) t.error->length = getLength();
-    auto opt = t;
+    if ( t.error ) t.error->weakHl.length = getLength();
+    auto [lexeme, type, position, error] = t;
     clear();
-    return Token(*opt.lexeme, *opt.type, opt.position->compact(), opt.error);
-}
+    return Token(*lexeme, *type, position->compact(), error);
+};
 
 int TokenFactory::getLength() const { return lexer->reader.position().index - t.position->index; };
 
 void TokenFactory::regError(Error &&err) {
-    auto ptr = lexer->errors.put<Error>(std::move(err));
-    lexer->errorsList.emplace(ptr);
+    const auto ptr = &*lexer->errors.insert(std::move(err));
     if (!t.error) t.error = ptr;
 };
 
 Error TokenFactory::makeError(string msg) const {
     return Error {
-        *t.position,
-        lexer->reader.position().index - t.position->index,
+        { lexer->reader.position(), 1 },
+        { *t.position, 0 },
         std::move(msg)
     };
 };

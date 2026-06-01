@@ -27,6 +27,7 @@ enum class Keyword {
     Module,
     Move,
     Null,
+    Override,
     Private,
     Protected,
     Public,
